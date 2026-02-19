@@ -6,9 +6,12 @@ export class Stage {
   public scene: THREE.Scene;
   public camera: THREE.PerspectiveCamera;
   public controls: OrbitControls;
-  
+
   private plane: THREE.Mesh | null = null;
   private gridHelper: THREE.GridHelper | null = null;
+
+  private followTarget: THREE.Vector3 | null = null;
+  private readonly defaultTarget = new THREE.Vector3(0, 0.8, 0);
 
   constructor(rendererElement: HTMLElement) {
     this.scene = new THREE.Scene();
@@ -21,15 +24,15 @@ export class Stage {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
     this.controls.rotateSpeed = 0.8;
-    this.controls.enableRotate = true; 
+    this.controls.enableRotate = true;
     this.controls.enablePan = false;
-    this.controls.enableZoom = true; 
-    this.controls.minPolarAngle = Math.PI / 4.5; 
-    this.controls.maxPolarAngle = Math.PI / 2.4; 
+    this.controls.enableZoom = true;
+    this.controls.minPolarAngle = Math.PI / 4.5;
+    this.controls.maxPolarAngle = Math.PI / 2.4;
     this.controls.minDistance = 3;
     this.controls.maxDistance = 50; // Increased to allow viewing larger worlds
     this.controls.target.set(0, 0.8, 0);
-    
+
     this.setupLights();
     // Environment is initialized with a default, but updated via updateDimensions immediately in SceneManager
   }
@@ -74,7 +77,7 @@ export class Stage {
     // 2. Create New Plane
     const planeGeometry = new THREE.PlaneGeometry(diameter, diameter);
     planeGeometry.rotateX(-Math.PI / 2);
-    const planeMaterial = new THREE.MeshStandardNodeMaterial({ 
+    const planeMaterial = new THREE.MeshStandardNodeMaterial({
       color: 0xffffff,
       transparent: true,
       opacity: 0.5,
@@ -94,7 +97,16 @@ export class Stage {
     this.camera.updateProjectionMatrix();
   }
 
+  /** Call every frame with the character's world position to follow, or null to return to origin. */
+  public setFollowTarget(pos: THREE.Vector3 | null) {
+    this.followTarget = pos ? pos.clone() : null;
+  }
+
   public update() {
+    const lerpTarget = this.followTarget
+      ? new THREE.Vector3(this.followTarget.x, 0.8, this.followTarget.z)
+      : this.defaultTarget;
+    this.controls.target.lerp(lerpTarget, 0.06);
     this.controls.update();
   }
 }

@@ -26,7 +26,7 @@ import { BoidsParams } from '../../types';
 
 export class CharacterManager {
   private instanceCount = 100;
-  private colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'];
+  private colors = ['#7EACEA', '#f472b6', '#fb7185', '#4ade80', '#fbbf24'];
 
   // Compute Buffers (GPU)
   private posAttribute: THREE.StorageInstancedBufferAttribute | null = null;
@@ -36,9 +36,8 @@ export class CharacterManager {
   private positionStorage: any;
   private velocityStorage: any;
 
-  // CPU Simulation Buffers (For Debug Canvas)
+  // CPU-side mirror of GPU positions (updated via GPU readback each frame)
   private debugPosArray: Float32Array | null = null;
-  private debugVelArray: Float32Array | null = null;
 
   // Logic Nodes
   private computeNode: any;
@@ -55,9 +54,9 @@ export class CharacterManager {
   private animationDuration = 0;
 
   // Uniforms
-  private uSpeed = uniform(0.05);
-  private uSeparationRadius = uniform(2.0);
-  private uSeparationStrength = uniform(0.05);
+  private uSpeed = uniform(0.015);
+  private uSeparationRadius = uniform(0.6);
+  private uSeparationStrength = uniform(0.030);
   private uWorldSize = uniform(20.0);
 
   public isLoaded = false;
@@ -110,44 +109,18 @@ export class CharacterManager {
     this.uWorldSize.value = size;
   }
 
-  public simulateOnCPU(params: BoidsParams, worldSize: number): Float32Array | null {
-    if (!this.debugPosArray || !this.debugVelArray) return null;
-    const count = this.instanceCount;
-    const currentPos = this.debugPosArray;
-    const currentVel = this.debugVelArray;
-
-    for (let i = 0; i < count; i++) {
-      const idx = i * 4;
-      let px = currentPos[idx], pz = currentPos[idx + 2];
-      let vx = currentVel[idx], vz = currentVel[idx + 2];
-
-      const dist = Math.sqrt(px * px + pz * pz);
-      if (dist > worldSize) {
-        vx += (-px / (dist || 1)) * 0.01;
-        vz += (-pz / (dist || 1)) * 0.01;
-      }
-
-      let sepX = 0, sepZ = 0;
-      for (let j = 0; j < count; j++) {
-        if (i === j) continue;
-        const jdx = j * 4;
-        const dx = px - currentPos[jdx], dz = pz - currentPos[jdx + 2];
-        const d = Math.sqrt(dx*dx + dz*dz);
-        if (d < params.separationRadius && d > 0.01) {
-          sepX += (dx / d) * params.separationStrength;
-          sepZ += (dz / d) * params.separationStrength;
-        }
-      }
-      vx += sepX; vz += sepZ;
-      const speed = Math.sqrt(vx*vx + vz*vz);
-      if (speed > 0.001) {
-        vx = (vx / speed) * params.speed;
-        vz = (vz / speed) * params.speed;
-      } else {
-        vx = 0; vz = params.speed;
-      }
-      currentVel[idx] = vx; currentVel[idx + 2] = vz;
-      currentPos[idx] = px + vx; currentPos[idx + 2] = pz + vz;
+  /**
+   * Reads back the GPU position buffer to CPU.
+   * Must be called after renderer.compute() each frame.
+   * Returns the updated positions (1-frame GPU lag).
+   */
+  public async syncFromGPU(renderer: any): Promise<Float32Array | null> {
+    if (!this.posAttribute) return null;
+    try {
+      const buffer = await renderer.getArrayBufferAsync(this.posAttribute);
+      this.debugPosArray = new Float32Array(buffer);
+    } catch {
+      // WebGPU readback not available – fall back to stale data
     }
     return this.debugPosArray;
   }
@@ -194,8 +167,7 @@ export class CharacterManager {
       colorArray[i * 3 + 2] = tempColor.b;
     }
 
-    this.debugPosArray = new Float32Array(posArray);
-    this.debugVelArray = new Float32Array(velArray);
+    this.debugPosArray = new Float32Array(posArray); // seeded with initial positions, updated via GPU readback
 
     this.posAttribute = new THREE.StorageInstancedBufferAttribute(posArray, 4);
     this.velAttribute = new THREE.StorageInstancedBufferAttribute(velArray, 4);
@@ -219,9 +191,9 @@ export class CharacterManager {
       const vel = velElement.xyz.toVar();
       const accel = vec3(0).toVar();
 
-      // World Boundary
-      const distToCenter = pos.length();
-      If(distToCenter.greaterThan(this.uWorldSize), () => {
+      // World Boundary (Square)
+      const halfSize = this.uWorldSize;
+      If(pos.x.abs().greaterThan(halfSize).or(pos.z.abs().greaterThan(halfSize)), () => {
         accel.addAssign(pos.negate().normalize().mul(0.01));
       });
 
@@ -348,6 +320,18 @@ export class CharacterManager {
 
   public fadeToAction(name: string) {}
   public getCount() { return this.instanceCount; }
+
+  /** Returns the current CPU-tracked positions buffer (vec4 stride). Updated each simulateOnCPU call. */
+  public getCPUPositions(): Float32Array | null {
+    return this.debugPosArray;
+  }
+
+  /** Returns the world position of a single character from the CPU buffer. */
+  public getCPUPosition(index: number): THREE.Vector3 | null {
+    if (!this.debugPosArray || index < 0 || index >= this.instanceCount) return null;
+    const i = index * 4;
+    return new THREE.Vector3(this.debugPosArray[i], this.debugPosArray[i + 1], this.debugPosArray[i + 2]);
+  }
 
   public setColors(hexColors: string[]) {
     this.colors = hexColors;

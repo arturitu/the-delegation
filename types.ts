@@ -6,7 +6,6 @@ export interface PerformanceStats {
   geometries: number;
   textures: number;
   entities: number;
-  isInstancingActive: boolean;
 }
 
 export interface BoidsParams {

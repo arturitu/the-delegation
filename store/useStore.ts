@@ -15,9 +15,9 @@ export const useStore = create<CharacterState>()(
 
       // Default Boids Parameters
       boidsParams: {
-        speed: 0.05,
-        separationRadius: 2.0,
-        separationStrength: 0.05,
+        speed: 0.015,
+        separationRadius: 0.6,
+        separationStrength: 0.030,
         alignmentRadius: 3.0,
         cohesionRadius: 3.0
       },
@@ -30,8 +30,7 @@ export const useStore = create<CharacterState>()(
         triangles: 0,
         geometries: 0,
         textures: 0,
-        entities: 0,
-        isInstancingActive: false
+        entities: 0
       },
 
       setAnimation: (name: string) => set({ currentAction: name }),

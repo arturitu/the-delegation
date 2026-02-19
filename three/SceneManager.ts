@@ -2,12 +2,16 @@
 import { Engine } from './core/Engine';
 import { Stage } from './core/Stage';
 import { CharacterManager } from './entities/CharacterManager';
+import { InputManager } from './input/InputManager';
 import { useStore } from '../store/useStore';
 
 export class SceneManager {
   private engine: Engine;
   private stage: Stage;
   private characters: CharacterManager;
+
+  private inputManager: InputManager | null = null;
+  private selectedIndex: number | null = null;
 
   private frameCount = 0;
   private lastTime = 0;
@@ -37,6 +41,14 @@ export class SceneManager {
 
     this.engine.renderer.setAnimationLoop(this.animate.bind(this));
     window.addEventListener('resize', this.onResize.bind(this));
+
+    this.inputManager = new InputManager(
+      this.engine.renderer.domElement,
+      this.stage.camera,
+      () => this.characters.getCPUPositions(),
+      () => this.characters.getCount(),
+      (index) => { this.selectedIndex = index; }
+    );
 
     // Subscriptions
     const sub1 = useStore.subscribe((state) => {
@@ -79,15 +91,22 @@ export class SceneManager {
     // 1. GPU Update
     this.characters.update(delta, this.engine.renderer);
 
-    // 2. CPU Debug Simulation (Only if debug panel is open)
-    const { isDebugOpen, boidsParams, worldSize } = useStore.getState();
-    if (isDebugOpen) {
-      // Pass worldSize to CPU simulation
-      const debugPositions = this.characters.simulateOnCPU(boidsParams, worldSize);
-      if (debugPositions) {
-        // Create a copy to trigger React reactivity
-        useStore.getState().setDebugPositions(new Float32Array(debugPositions));
+    // 2. GPU → CPU readback (async, 1-frame lag). Keeps debugPosArray in sync with the compute shader.
+    //    Used for picking, camera follow, and the debug canvas/markers.
+    const { isDebugOpen } = useStore.getState();
+    this.characters.syncFromGPU(this.engine.renderer).then((positions) => {
+      if (!positions) return;
+      if (isDebugOpen) {
+        useStore.getState().setDebugPositions(new Float32Array(positions));
       }
+    });
+
+    // 3. Camera follow selected character
+    if (this.selectedIndex !== null) {
+      const pos = this.characters.getCPUPosition(this.selectedIndex);
+      this.stage.setFollowTarget(pos);
+    } else {
+      this.stage.setFollowTarget(null);
     }
 
     this.engine.render(this.stage.scene, this.stage.camera);
@@ -108,8 +127,7 @@ export class SceneManager {
         triangles: info.render.triangles,
         geometries: info.memory.geometries,
         textures: info.memory.textures,
-        entities: count,
-        isInstancingActive: info.render.drawCalls < count
+        entities: count
       });
 
       this.frameCount = 0;
@@ -121,6 +139,7 @@ export class SceneManager {
     this.isDisposed = true;
     this.unsubs.forEach(unsub => unsub());
     window.removeEventListener('resize', this.onResize);
+    this.inputManager?.dispose();
     this.engine.dispose();
     if (this.stage.controls) this.stage.controls.dispose();
   }
