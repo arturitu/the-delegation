@@ -11,6 +11,7 @@ const DebugPanel: React.FC = () => {
     boidsParams,
     setBoidsParams,
     debugPositions,
+    debugStates,
     worldSize,
     setWorldSize
   } = useStore();
@@ -31,12 +32,9 @@ const DebugPanel: React.FC = () => {
     ctx.fillStyle = '#f4f4f5'; // zinc-100
     ctx.fillRect(0, 0, w, h);
 
-    // Draw boundary (World Size)
-    // Map world size to canvas. If worldSize is 20 (radius), total width is 40.
-    // We map max range of ~60 to canvas width
     const scale = w / 100; // fit ~50 radius
 
-    // Draw center
+    // Crosshair grid lines
     ctx.strokeStyle = '#e4e4e7';
     ctx.beginPath();
     ctx.moveTo(w/2, 0);
@@ -45,15 +43,21 @@ const DebugPanel: React.FC = () => {
     ctx.lineTo(w, h/2);
     ctx.stroke();
 
-    // Draw World Boundary Square
+    // World boundary square
     ctx.strokeStyle = '#d4d4d8';
     ctx.setLineDash([5, 5]);
     const size = worldSize * scale * 2;
     ctx.strokeRect(w/2 - size/2, h/2 - size/2, size, size);
     ctx.setLineDash([]);
 
-    // Draw boids
-    ctx.fillStyle = '#ef4444'; // red-500
+    // State colour map
+    const STATE_COLORS = [
+      '#22c55e', // 0 BOIDS  — green
+      '#f97316', // 1 FROZEN — orange
+      '#a855f7', // 2 GOTO   — purple
+    ];
+    const PLAYER_COLOR = '#3b82f6'; // blue
+
     const count = debugPositions.length / 4;
 
     for (let i = 0; i < count; i++) {
@@ -63,12 +67,29 @@ const DebugPanel: React.FC = () => {
       const cx = (x * scale) + (w / 2);
       const cy = (z * scale) + (h / 2);
 
-      ctx.beginPath();
-      ctx.arc(cx, cy, 2, 0, Math.PI * 2);
-      ctx.fill();
+      if (i === 0) {
+        // Player — larger blue dot with a ring
+        ctx.fillStyle = PLAYER_COLOR;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = PLAYER_COLOR;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 6.5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 1;
+      } else {
+        // NPC — colour by state
+        const state = debugStates ? Math.round(debugStates[i * 4 + 3]) : 0;
+        ctx.fillStyle = STATE_COLORS[state] ?? STATE_COLORS[0];
+        ctx.beginPath();
+        ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
-  }, [debugPositions, worldSize]);
+  }, [debugPositions, debugStates, worldSize]);
 
   if (!isDebugOpen) return null;
 
@@ -108,6 +129,21 @@ const DebugPanel: React.FC = () => {
              height={250}
              className="w-full bg-zinc-100 rounded-lg border border-zinc-200"
            />
+           {/* Legend */}
+           <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+             <span className="flex items-center gap-1 text-[9px] text-zinc-500">
+               <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#3b82f6]" /> Player
+             </span>
+             <span className="flex items-center gap-1 text-[9px] text-zinc-500">
+               <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#22c55e]" /> Boids
+             </span>
+             <span className="flex items-center gap-1 text-[9px] text-zinc-500">
+               <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#f97316]" /> Frozen
+             </span>
+             <span className="flex items-center gap-1 text-[9px] text-zinc-500">
+               <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#a855f7]" /> GoTo
+             </span>
+           </div>
            <p className="text-[9px] text-zinc-400 mt-1">Real-time CPU mirror. Dashed line is world boundary.</p>
         </div>
 

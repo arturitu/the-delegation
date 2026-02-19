@@ -8,6 +8,7 @@ const PLAYER_ENCOUNTER_RADIUS = 1.5;       // world units — player↔NPC chat 
 const PLAYER_ARRIVAL_RADIUS = 0.3;         // world units — GOTO waypoint reached
 const FROZEN_DURATION_MS = 4000;           // ms NPCs stay frozen after a collision
 const MAX_FROZEN_PAIRS = 10;               // cap simultaneous NPC↔NPC frozen pairs
+const UNFREEZE_COOLDOWN_MS = 800;          // ms after unfreeze before NPC can re-collide
 
 interface FrozenPair {
   a: number;
@@ -18,6 +19,7 @@ interface FrozenPair {
 export class BehaviorManager {
   private frozenPairs = new Map<string, FrozenPair>();
   private frozenIndices = new Set<number>();
+  private unfreezeTimestamps = new Map<number, number>(); // index → time of last unfreeze
   private currentEncounterNPC: number | null = null;
 
   constructor(
@@ -44,8 +46,15 @@ export class BehaviorManager {
         this.stateBuffer.setState(pair.b, AgentBehavior.BOIDS);
         this.frozenIndices.delete(pair.a);
         this.frozenIndices.delete(pair.b);
+        this.unfreezeTimestamps.set(pair.a, now);
+        this.unfreezeTimestamps.set(pair.b, now);
         this.frozenPairs.delete(key);
       }
+    }
+
+    // Clean up expired cooldowns
+    for (const [idx, ts] of this.unfreezeTimestamps) {
+      if (now - ts > UNFREEZE_COOLDOWN_MS) this.unfreezeTimestamps.delete(idx);
     }
 
     // 2. Detect new NPC↔NPC collisions (skip index 0 = player)
@@ -53,10 +62,12 @@ export class BehaviorManager {
       for (let i = 1; i < count - 1; i++) {
         if (this.frozenIndices.has(i)) continue;
         if (this.stateBuffer.getState(i) !== AgentBehavior.BOIDS) continue;
+        if (this.unfreezeTimestamps.has(i)) continue; // cooling down
 
         for (let j = i + 1; j < count; j++) {
           if (this.frozenIndices.has(j)) continue;
           if (this.stateBuffer.getState(j) !== AgentBehavior.BOIDS) continue;
+          if (this.unfreezeTimestamps.has(j)) continue; // cooling down
 
           const dx = positions[i * 4] - positions[j * 4];
           const dz = positions[i * 4 + 2] - positions[j * 4 + 2];

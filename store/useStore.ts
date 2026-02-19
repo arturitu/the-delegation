@@ -23,6 +23,7 @@ export const useStore = create<CharacterState>()(
       },
 
       debugPositions: null,
+      debugStates: null,
       activeEncounter: null,
 
       performance: {
@@ -46,6 +47,7 @@ export const useStore = create<CharacterState>()(
       })),
 
       setDebugPositions: (positions) => set({ debugPositions: positions }),
+      setDebugStates: (states) => set({ debugStates: states }),
       setActiveEncounter: (encounter: ActiveEncounter | null) => set({ activeEncounter: encounter }),
 
       updatePerformance: (performance: PerformanceStats) => set({ performance }),

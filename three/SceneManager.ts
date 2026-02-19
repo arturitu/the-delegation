@@ -113,6 +113,10 @@ export class SceneManager {
       this.behaviorManager?.update(positions);
       if (isDebugOpen) {
         useStore.getState().setDebugPositions(new Float32Array(positions));
+        const stateBuffer = this.characters.getAgentStateBuffer();
+        if (stateBuffer) {
+          useStore.getState().setDebugStates(new Float32Array(stateBuffer.array));
+        }
       }
     });
 

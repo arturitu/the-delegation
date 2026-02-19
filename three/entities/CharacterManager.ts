@@ -52,11 +52,14 @@ export class CharacterManager {
   private baseGeometry: THREE.BufferGeometry | null = null;
   private baseMaterial: THREE.MeshStandardMaterial | null = null;
 
-  // Animation Data
-  private bakedAnimationBuffer: THREE.StorageBufferAttribute | null = null;
-  private numFrames = 0;
+  // Animation Data (walk = BOIDS/GOTO, idle = FROZEN)
+  private bakedWalkBuffer: THREE.StorageBufferAttribute | null = null;
+  private bakedIdleBuffer: THREE.StorageBufferAttribute | null = null;
+  private numWalkFrames = 0;
+  private numIdleFrames = 0;
+  private walkDuration = 0;
+  private idleDuration = 0;
   private numBones = 0;
-  private animationDuration = 0;
 
   // Uniforms
   private uSpeed = uniform(0.015);
@@ -81,13 +84,30 @@ export class CharacterManager {
         }
       });
 
-      const clip = gltf.animations[1];
-      if (!skinnedMesh || !clip) return;
+      const walkClip = gltf.animations[1];
+      const idleClip = gltf.animations[0];
+      if (!skinnedMesh || !walkClip) return;
 
       this.baseGeometry = skinnedMesh.geometry;
       this.baseMaterial = skinnedMesh.material as THREE.MeshStandardMaterial;
 
-      this.bakeAnimation(skinnedMesh, clip, model);
+      const walkData = this.bakeAnimation(skinnedMesh, walkClip, model);
+      this.bakedWalkBuffer = walkData.buffer;
+      this.numWalkFrames = walkData.numFrames;
+      this.walkDuration = walkData.duration;
+      this.numBones = walkData.numBones;
+
+      if (idleClip) {
+        const idleData = this.bakeAnimation(skinnedMesh, idleClip, model);
+        this.bakedIdleBuffer = idleData.buffer;
+        this.numIdleFrames = idleData.numFrames;
+        this.idleDuration = idleData.duration;
+      } else {
+        // Fallback: reuse walk for idle
+        this.bakedIdleBuffer = this.bakedWalkBuffer;
+        this.numIdleFrames = this.numWalkFrames;
+        this.idleDuration = this.walkDuration;
+      }
       this.initInstances();
       this.isLoaded = true;
     } catch (err) {
@@ -320,28 +340,40 @@ export class CharacterManager {
 
       const finalPosition = positionLocal.toVar();
 
-      if (this.bakedAnimationBuffer) {
-        const animBuffer = storage(this.bakedAnimationBuffer, 'mat4', this.numFrames * this.numBones);
-        const animTime = time.add(timeOffset);
-        const t = animTime.div(float(this.animationDuration)).fract();
-        const currentFrame = t.mul(float(this.numFrames)).toInt();
-        const safeFrame = currentFrame.min(uint(this.numFrames - 1));
+      if (this.bakedWalkBuffer && this.bakedIdleBuffer) {
+        const walkBuffer = storage(this.bakedWalkBuffer, 'mat4', this.numWalkFrames * this.numBones);
+        const idleBuffer = storage(this.bakedIdleBuffer, 'mat4', this.numIdleFrames * this.numBones);
+        const agentState = this.agentStateBuffer!.storageNode.element(instanceIndex).w;
 
         const skinIndex = attribute('skinIndex');
         const skinWeight = attribute('skinWeight');
         const skinMat = mat4(0).toVar();
 
-        const addInfluence = (boneIdxNode: any, weightNode: any) => {
+        // FROZEN (state ≈ 1) uses idle animation; BOIDS and GOTO use walk animation
+        const isFrozen = agentState.greaterThan(float(0.5)).and(agentState.lessThan(float(1.5)));
+
+        const buildSkinMat = (animBuf: any, numFrames: number, duration: number) => {
+          const animTime = time.add(timeOffset);
+          const t = animTime.div(float(duration)).fract();
+          const currentFrame = t.mul(float(numFrames)).toInt();
+          const safeFrame = currentFrame.min(uint(numFrames - 1));
+          const addInfluence = (boneIdxNode: any, weightNode: any) => {
             If(weightNode.greaterThan(0), () => {
               const address = safeFrame.mul(uint(this.numBones)).add(boneIdxNode.toInt());
-              skinMat.addAssign(animBuffer.element(address).mul(weightNode));
-           });
+              skinMat.addAssign(animBuf.element(address).mul(weightNode));
+            });
+          };
+          addInfluence(skinIndex.x, skinWeight.x);
+          addInfluence(skinIndex.y, skinWeight.y);
+          addInfluence(skinIndex.z, skinWeight.z);
+          addInfluence(skinIndex.w, skinWeight.w);
         };
 
-        addInfluence(skinIndex.x, skinWeight.x);
-        addInfluence(skinIndex.y, skinWeight.y);
-        addInfluence(skinIndex.z, skinWeight.z);
-        addInfluence(skinIndex.w, skinWeight.w);
+        If(isFrozen, () => {
+          buildSkinMat(idleBuffer, this.numIdleFrames, this.idleDuration);
+        }).Else(() => {
+          buildSkinMat(walkBuffer, this.numWalkFrames, this.walkDuration);
+        });
 
         finalPosition.assign(skinMat.mul(vec4(positionLocal, 1.0)).xyz);
       }
@@ -354,20 +386,25 @@ export class CharacterManager {
     const mixer = new THREE.AnimationMixer(root);
     mixer.clipAction(clip).play();
     const skeleton = mesh.skeleton;
-    this.animationDuration = clip.duration;
-    this.numFrames = Math.ceil(clip.duration * 60);
-    this.numBones = skeleton.bones.length;
-    const data = new Float32Array(this.numFrames * this.numBones * 16);
-    for (let f = 0; f < this.numFrames; f++) {
-      mixer.setTime((f / this.numFrames) * clip.duration);
+    const duration = clip.duration;
+    const numFrames = Math.ceil(duration * 60);
+    const numBones = skeleton.bones.length;
+    const data = new Float32Array(numFrames * numBones * 16);
+    for (let f = 0; f < numFrames; f++) {
+      mixer.setTime((f / numFrames) * duration);
       root.updateMatrixWorld(true);
       skeleton.update();
-      for (let b = 0; b < this.numBones; b++) {
-        const i = (f * this.numBones + b) * 16;
+      for (let b = 0; b < numBones; b++) {
+        const i = (f * numBones + b) * 16;
         for (let k = 0; k < 16; k++) data[i + k] = skeleton.boneMatrices[b * 16 + k];
       }
     }
-    this.bakedAnimationBuffer = new THREE.StorageBufferAttribute(data, 16);
+    return {
+      buffer: new THREE.StorageBufferAttribute(data, 16),
+      numFrames,
+      numBones,
+      duration,
+    };
   }
 
   public fadeToAction(name: string) {}

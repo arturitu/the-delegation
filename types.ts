@@ -25,6 +25,7 @@ export interface CharacterState {
   worldSize: number;
   boidsParams: BoidsParams;
   debugPositions: Float32Array | null;
+  debugStates: Float32Array | null;    // vec4 stride: .w = AgentBehavior per instance
   activeEncounter: ActiveEncounter | null;
 
   performance: PerformanceStats;
@@ -37,6 +38,7 @@ export interface CharacterState {
   setWorldSize: (size: number) => void;
   setBoidsParams: (params: Partial<BoidsParams>) => void;
   setDebugPositions: (positions: Float32Array) => void;
+  setDebugStates: (states: Float32Array) => void;
   setActiveEncounter: (encounter: ActiveEncounter | null) => void;
   updatePerformance: (stats: PerformanceStats) => void;
 }
