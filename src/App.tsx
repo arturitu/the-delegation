@@ -1,3 +1,8 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 
 import React, { useEffect, useRef } from 'react';
 import { SceneManager } from './three/SceneManager';
@@ -27,11 +32,6 @@ const App: React.FC = () => {
       
       {/* UI Layer */}
       <UIOverlay />
-
-      {/* Loading Hint */}
-      <div className="absolute top-4 right-4 pointer-events-none text-[10px] text-white/20 uppercase tracking-widest">
-        WebGPU Experimental
-      </div>
     </div>
   );
 };

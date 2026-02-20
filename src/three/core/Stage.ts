@@ -33,6 +33,13 @@ export class Stage {
     this.controls.maxDistance = 50; // Increased to allow viewing larger worlds
     this.controls.target.set(0, 0.8, 0);
 
+    this.controls.addEventListener('start', () => {
+      rendererElement.style.cursor = 'grabbing';
+    });
+    this.controls.addEventListener('end', () => {
+      rendererElement.style.cursor = 'auto';
+    });
+
     this.setupLights();
     // Environment is initialized with a default, but updated via updateDimensions immediately in SceneManager
   }

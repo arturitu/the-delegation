@@ -24,7 +24,7 @@ import {
 } from 'three/tsl';
 import { BoidsParams, AgentBehavior } from '../../types';
 import { AgentStateBuffer } from '../behavior/AgentStateBuffer';
-import { PLAYER_INDEX } from '../../data/agents';
+import { AGENTS, PLAYER_INDEX } from '../../data/agents';
 
 export class CharacterManager {
   private instanceCount = 100;
@@ -175,23 +175,23 @@ export class CharacterManager {
     const colorArray = new Float32Array(this.instanceCount * 3);
 
     const tempColor = new THREE.Color();
-    const npcColors = this.colors.slice(1); // colors[1..] reserved for NPCs
     const spawnRadius = this.worldSize;
 
     for (let i = 0; i < this.instanceCount; i++) {
+      const agent = AGENTS[i] || AGENTS[0];
       if (i === PLAYER_INDEX) {
         // Player spawns slightly offset from center so they're clearly visible
         posArray[i * 4 + 0] = 0;
         posArray[i * 4 + 2] = 0;
         posArray[i * 4 + 3] = 1;
-        tempColor.set(this.colors[0]);
+        tempColor.set(agent.color);
       } else {
         posArray[i * 4 + 0] = (Math.random() - 0.5) * spawnRadius * 2;
         posArray[i * 4 + 2] = (Math.random() - 0.5) * spawnRadius * 2;
         posArray[i * 4 + 3] = 1;
         velArray[i * 4 + 0] = (Math.random() - 0.5) * 0.1;
         velArray[i * 4 + 2] = (Math.random() - 0.5) * 0.1;
-        tempColor.set(npcColors[Math.floor(Math.random() * npcColors.length)]);
+        tempColor.set(agent.color);
       }
 
       timeOffsetArray[i] = Math.random() * 10;
@@ -241,16 +241,20 @@ export class CharacterManager {
           const waypointXZ = vec3(agentData.x, float(0), agentData.z);
           const toTarget = waypointXZ.sub(pos);
           const dist = toTarget.length();
-          const gotoVel = vec3(0).toVar();
           If(dist.greaterThan(float(0.2)), () => {
-            gotoVel.assign(toTarget.normalize().mul(this.uSpeed));
+            const gotoVel = toTarget.normalize().mul(this.uSpeed.mul(3.0));
+            velElement.assign(vec4(gotoVel, 0.0));
+            posElement.assign(vec4(pos.add(gotoVel), 1.0));
+          }).Else(() => {
+            posElement.assign(vec4(pos, 1.0));
           });
-          velElement.assign(vec4(gotoVel, 0.0));
-          posElement.assign(vec4(pos.add(gotoVel), 1.0));
 
         }).Else(() => {
-          // FROZEN — hold position, zero velocity
-          velElement.assign(vec4(0, 0, 0, 0));
+          // FROZEN — hold position, use agentData.xz as facing direction if non-zero
+          const facing = vec3(agentData.x, float(0), agentData.z);
+          If(facing.length().greaterThan(float(0.001)), () => {
+            velElement.assign(vec4(facing, 0.0));
+          });
           posElement.assign(vec4(pos, 1.0));
         });
 
@@ -428,6 +432,11 @@ export class CharacterManager {
     if (!this.debugPosArray || index < 0 || index >= this.instanceCount) return null;
     const i = index * 4;
     return new THREE.Vector3(this.debugPosArray[i], this.debugPosArray[i + 1], this.debugPosArray[i + 2]);
+  }
+
+  public getAgentState(index: number): number {
+    if (!this.agentStateBuffer || index < 0 || index >= this.instanceCount) return 0;
+    return this.agentStateBuffer.getState(index);
   }
 
   public setColors(hexColors: string[]) {

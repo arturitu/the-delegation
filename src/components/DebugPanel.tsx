@@ -68,15 +68,15 @@ const DebugPanel: React.FC = () => {
       const cy = (z * scale) + (h / 2);
 
       if (i === 0) {
-        // Player — larger blue dot with a ring
+        // Player — smaller blue dot with a ring
         ctx.fillStyle = PLAYER_COLOR;
         ctx.beginPath();
-        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = PLAYER_COLOR;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(cx, cy, 6.5, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
         ctx.stroke();
         ctx.lineWidth = 1;
       } else {
@@ -94,7 +94,7 @@ const DebugPanel: React.FC = () => {
   if (!isDebugOpen) return null;
 
   return (
-    <div className="fixed top-20 right-8 w-80 bg-white/80 backdrop-blur-2xl rounded-2xl border border-black/5 shadow-2xl p-5 pointer-events-auto text-zinc-900 animate-in fade-in slide-in-from-right-4 duration-300 overflow-y-auto max-h-[85vh] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:display-none">
+    <div className="fixed top-20 right-8 w-80 bg-white/80 backdrop-blur-2xl rounded-2xl border border-black/5 shadow-2xl p-5 pointer-events-auto text-zinc-900 animate-in fade-in slide-in-from-right-4 duration-300 overflow-y-auto max-h-[85vh] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:display-none z-30">
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-xs font-black uppercase tracking-widest text-zinc-400">System Performance</h2>
         <div className={`h-2 w-2 rounded-full ${performance.fps > 50 ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
@@ -139,9 +139,6 @@ const DebugPanel: React.FC = () => {
              </span>
              <span className="flex items-center gap-1 text-[9px] text-zinc-500">
                <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#f97316]" /> Frozen
-             </span>
-             <span className="flex items-center gap-1 text-[9px] text-zinc-500">
-               <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#a855f7]" /> GoTo
              </span>
            </div>
            <p className="text-[9px] text-zinc-400 mt-1">Real-time CPU mirror. Dashed line is world boundary.</p>

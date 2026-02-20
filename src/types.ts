@@ -16,6 +16,12 @@ export interface BoidsParams {
   cohesionRadius: number;
 }
 
+export interface ChatMessage {
+  role: 'user' | 'model';
+  text: string;
+  timestamp: string;
+}
+
 export interface CharacterState {
   currentAction: string;
   isThinking: boolean;
@@ -28,6 +34,11 @@ export interface CharacterState {
   debugStates: Float32Array | null;    // vec4 stride: .w = AgentBehavior per instance
   activeEncounter: ActiveEncounter | null;
   selectedNpcIndex: number | null;    // NPC explicitly clicked in the scene
+  selectedPosition: { x: number; y: number } | null; // Screen coordinates for selected bubble
+  hoveredNpcIndex: number | null;     // NPC currently under the cursor
+  hoverPosition: { x: number; y: number } | null; // Screen coordinates for hover bubble
+  isChatting: boolean;
+  chatMessages: ChatMessage[];
 
   performance: PerformanceStats;
 
@@ -42,6 +53,11 @@ export interface CharacterState {
   setDebugStates: (states: Float32Array) => void;
   setActiveEncounter: (encounter: ActiveEncounter | null) => void;
   setSelectedNpc: (index: number | null) => void;
+  setSelectedPosition: (pos: { x: number; y: number } | null) => void;
+  setHoveredNpc: (index: number | null, pos: { x: number; y: number } | null) => void;
+  startChat: (index: number) => void;
+  endChat: () => void;
+  sendMessage: (text: string) => Promise<void>;
   updatePerformance: (stats: PerformanceStats) => void;
 }
 
@@ -59,7 +75,7 @@ export enum AgentBehavior {
 
 export interface ActiveEncounter {
   npcIndex: number;
-  npcName: string;
+  npcDepartment: string;
   npcRole: string;
   npcMission: string;
   npcPersonality: string;
