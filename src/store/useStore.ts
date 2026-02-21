@@ -28,6 +28,7 @@ export const useStore = create<CharacterState>()(
     hoveredNpcIndex: null,
     hoverPosition: null,
     isChatting: false,
+    isTyping: false,
     chatMessages: [],
 
     performance: {
@@ -39,8 +40,14 @@ export const useStore = create<CharacterState>()(
       entities: 0
     },
 
+    lastSpeakingTrigger: null,
+
     setAnimation: (name: string) => set({ currentAction: name }),
+    setSpeaking: (index: number, isSpeaking: boolean) => set({
+      lastSpeakingTrigger: { index, isSpeaking, timestamp: Date.now() }
+    }),
     setThinking: (isThinking: boolean) => set({ isThinking }),
+    setIsTyping: (isTyping: boolean) => set({ isTyping }),
     setAIResponse: (aiResponse: string) => set({ aiResponse }),
     toggleDebug: () => set((state) => ({ isDebugOpen: !state.isDebugOpen })),
     setInstanceCount: (count: number) => set({ instanceCount: count }),

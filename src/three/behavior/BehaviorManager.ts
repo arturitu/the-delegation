@@ -16,6 +16,8 @@ interface FrozenPair {
   a: number;
   b: number;
   expiresAt: number;
+  talkingA: boolean;
+  nextSwap: number;
 }
 
 export class BehaviorManager {
@@ -29,6 +31,8 @@ export class BehaviorManager {
     private stateBuffer: AgentStateBuffer,
     private agents: AgentData[],
     private onEncounterChange: (encounter: ActiveEncounter | null) => void,
+    private onSpeakingTrigger: (index: number, isSpeaking: boolean) => void,
+    private onPlayerArrivedAtNPC: (index: number) => void,
   ) {
     // Player starts FROZEN (idle) — user activates it with a floor click (GOTO)
     stateBuffer.setState(PLAYER_INDEX, AgentBehavior.FROZEN);
@@ -47,15 +51,25 @@ export class BehaviorManager {
       if (now > pair.expiresAt) {
         this.stateBuffer.setState(pair.a, AgentBehavior.BOIDS);
         this.stateBuffer.setState(pair.b, AgentBehavior.BOIDS);
-        
-        // When unfreezing, we don't need to do anything special here anymore
-        // as the BOIDS logic on GPU will take over.
+
+        // Stop speaking animation
+        this.onSpeakingTrigger(pair.a, false);
+        this.onSpeakingTrigger(pair.b, false);
 
         this.frozenIndices.delete(pair.a);
         this.frozenIndices.delete(pair.b);
         this.unfreezeTimestamps.set(pair.a, now);
         this.unfreezeTimestamps.set(pair.b, now);
         this.frozenPairs.delete(key);
+      } else {
+        // Alternation logic: one talks, the other listens
+        if (now > pair.nextSwap) {
+          pair.talkingA = !pair.talkingA;
+          pair.nextSwap = now + 1500 + Math.random() * 1500; // 1.5 - 3 seconds
+
+          this.onSpeakingTrigger(pair.a, pair.talkingA);
+          this.onSpeakingTrigger(pair.b, !pair.talkingA);
+        }
       }
     }
 
@@ -80,10 +94,15 @@ export class BehaviorManager {
           const dz = positions[i * 4 + 2] - positions[j * 4 + 2];
 
           if (dx * dx + dz * dz < NPC_COLLISION_RADIUS * NPC_COLLISION_RADIUS) {
-            this.stateBuffer.setState(i, AgentBehavior.FROZEN);
-            this.stateBuffer.setState(j, AgentBehavior.FROZEN);
+            this.stateBuffer.setState(i, AgentBehavior.TALK);
+            this.stateBuffer.setState(j, AgentBehavior.TALK);
 
-            // Set NPCs to face each other using the waypoint fields (used for facing when FROZEN)
+            // Trigger looping mouth animation on one of them first
+            const talkingA = Math.random() > 0.5;
+            this.onSpeakingTrigger(i, talkingA);
+            this.onSpeakingTrigger(j, !talkingA);
+
+            // Set NPCs to face each other using the waypoint fields (used for facing when FROZEN/TALK)
             const dirX = positions[j * 4] - positions[i * 4];
             const dirZ = positions[j * 4 + 2] - positions[i * 4 + 2];
             this.stateBuffer.setWaypoint(i, dirX, dirZ);
@@ -92,7 +111,13 @@ export class BehaviorManager {
             this.frozenIndices.add(i);
             this.frozenIndices.add(j);
             const key = `${i}-${j}`;
-            this.frozenPairs.set(key, { a: i, b: j, expiresAt: now + FROZEN_DURATION_MS });
+            this.frozenPairs.set(key, {
+              a: i,
+              b: j,
+              expiresAt: now + FROZEN_DURATION_MS,
+              talkingA,
+              nextSwap: now + 1500 + Math.random() * 1000
+            });
 
             if (this.frozenPairs.size >= MAX_FROZEN_PAIRS) break;
           }
@@ -108,17 +133,19 @@ export class BehaviorManager {
       const pdz = wp.z - positions[PLAYER_INDEX * 4 + 2];
       if (pdx * pdx + pdz * pdz < PLAYER_ARRIVAL_RADIUS * PLAYER_ARRIVAL_RADIUS) {
         this.stateBuffer.setState(PLAYER_INDEX, AgentBehavior.FROZEN);
-        
+
         if (this.chatNPC !== null) {
+          const finishedNPC = this.chatNPC;
           // Face the NPC we came to talk to
-          const nx = positions[this.chatNPC * 4];
-          const nz = positions[this.chatNPC * 4 + 2];
+          const nx = positions[finishedNPC * 4];
+          const nz = positions[finishedNPC * 4 + 2];
           const fx = nx - positions[PLAYER_INDEX * 4];
           const fz = nz - positions[PLAYER_INDEX * 4 + 2];
           this.stateBuffer.setWaypoint(PLAYER_INDEX, fx, fz);
-          
+
           // Notify store that chat has officially started (arrival)
           useStore.getState().setAnimation('Wave'); // Optional: greeting animation
+          this.onPlayerArrivedAtNPC(finishedNPC);
           this.chatNPC = null;
         } else {
           // Store the arrival direction in the waypoint fields (now used for facing)
@@ -174,14 +201,14 @@ export class BehaviorManager {
   public startChat(npcIndex: number, positions: Float32Array): void {
     const nx = positions[npcIndex * 4];
     const nz = positions[npcIndex * 4 + 2];
-    
+
     const px = positions[PLAYER_INDEX * 4];
     const pz = positions[PLAYER_INDEX * 4 + 2];
-    
+
     let dx = px - nx;
     let dz = pz - nz;
     const dist = Math.sqrt(dx * dx + dz * dz);
-    
+
     if (dist < 0.01) {
       dx = 1;
       dz = 0;
@@ -189,19 +216,19 @@ export class BehaviorManager {
       dx /= dist;
       dz /= dist;
     }
-    
+
     // Target position for player: 1.2 units away from NPC
     const targetX = nx + dx * 1.2;
     const targetZ = nz + dz * 1.2;
-    
+
     this.stateBuffer.setWaypoint(PLAYER_INDEX, targetX, targetZ);
     this.stateBuffer.setState(PLAYER_INDEX, AgentBehavior.GOTO);
     this.chatNPC = npcIndex;
-    
+
     // Freeze NPC and set it to face the player's future position
     this.stateBuffer.setState(npcIndex, AgentBehavior.FROZEN);
     this.stateBuffer.setWaypoint(npcIndex, dx, dz); // Face the player
-    
+
     // Break any existing pair
     for (const [key, pair] of this.frozenPairs) {
       if (pair.a === npcIndex || pair.b === npcIndex) {

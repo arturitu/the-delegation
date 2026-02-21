@@ -20,15 +20,17 @@ import {
   time,
   texture,
   sin,
-  cos
+  cos,
+  uv,
+  vec2
 } from 'three/tsl';
-import { BoidsParams, AgentBehavior } from '../../types';
+import { BoidsParams, AgentBehavior, ExpressionKey } from '../../types';
 import { AgentStateBuffer } from '../behavior/AgentStateBuffer';
+import { ExpressionBuffer } from '../behavior/ExpressionBuffer';
 import { AGENTS, PLAYER_INDEX } from '../../data/agents';
 
 export class CharacterManager {
   private instanceCount = 100;
-  private colors = ['#7EACEA', '#f472b6', '#fb7185', '#4ade80', '#fbbf24'];
 
   // Compute Buffers (GPU)
   private posAttribute: THREE.StorageInstancedBufferAttribute | null = null;
@@ -41,6 +43,9 @@ export class CharacterManager {
   // Agent state buffer (CPU+GPU): waypoint + behavior state per instance
   private agentStateBuffer: AgentStateBuffer | null = null;
 
+  // Expression buffer (CPU+GPU): eye and mouth UV offsets per instance
+  private expressionBuffer: ExpressionBuffer | null = null;
+
   // CPU-side mirror of GPU positions (updated via GPU readback each frame)
   private debugPosArray: Float32Array | null = null;
 
@@ -48,17 +53,20 @@ export class CharacterManager {
   private computeNode: any;
 
   // Assets & Objects
-  private instancedMesh: THREE.Mesh | null = null;
-  private baseGeometry: THREE.BufferGeometry | null = null;
-  private baseMaterial: THREE.MeshStandardMaterial | null = null;
+  private instancedMeshes: THREE.Mesh[] = [];
+  private meshData: { name: string; geometry: THREE.BufferGeometry; material: THREE.MeshStandardMaterial }[] = [];
+  private colors: string[] | null = null;
 
-  // Animation Data (walk = BOIDS/GOTO, idle = FROZEN)
+  // Animation Data (walk = BOIDS/GOTO, idle = FROZEN, talk = TALK)
   private bakedWalkBuffer: THREE.StorageBufferAttribute | null = null;
   private bakedIdleBuffer: THREE.StorageBufferAttribute | null = null;
+  private bakedTalkBuffer: THREE.StorageBufferAttribute | null = null;
   private numWalkFrames = 0;
   private numIdleFrames = 0;
+  private numTalkFrames = 0;
   private walkDuration = 0;
   private idleDuration = 0;
+  private talkDuration = 0;
   private numBones = 0;
 
   // Uniforms
@@ -78,36 +86,52 @@ export class CharacterManager {
       const gltf = await loader.loadAsync('/models/character.glb');
       const model = gltf.scene;
 
-      let skinnedMesh: THREE.SkinnedMesh | null = null;
+      const skinnedMeshes: THREE.SkinnedMesh[] = [];
       model.traverse((child) => {
-        if ((child as any).isSkinnedMesh && !skinnedMesh) {
-          skinnedMesh = child as THREE.SkinnedMesh;
+        if ((child as any).isSkinnedMesh) {
+          skinnedMeshes.push(child as THREE.SkinnedMesh);
         }
       });
 
-      const walkClip = gltf.animations[1];
+      const walkClip = gltf.animations[2];
+      const talkClip = gltf.animations[1];
       const idleClip = gltf.animations[0];
-      if (!skinnedMesh || !walkClip) return;
+      if (skinnedMeshes.length === 0 || !walkClip) return;
 
-      this.baseGeometry = skinnedMesh.geometry;
-      this.baseMaterial = skinnedMesh.material as THREE.MeshStandardMaterial;
+      this.meshData = skinnedMeshes.map(m => ({
+        name: m.name,
+        geometry: m.geometry,
+        material: m.material as THREE.MeshStandardMaterial
+      }));
 
-      const walkData = this.bakeAnimation(skinnedMesh, walkClip, model);
+      const firstMesh = skinnedMeshes[0];
+
+      const walkData = this.bakeAnimation(firstMesh, walkClip, model);
       this.bakedWalkBuffer = walkData.buffer;
       this.numWalkFrames = walkData.numFrames;
       this.walkDuration = walkData.duration;
       this.numBones = walkData.numBones;
 
       if (idleClip) {
-        const idleData = this.bakeAnimation(skinnedMesh, idleClip, model);
+        const idleData = this.bakeAnimation(firstMesh, idleClip, model);
         this.bakedIdleBuffer = idleData.buffer;
         this.numIdleFrames = idleData.numFrames;
         this.idleDuration = idleData.duration;
       } else {
-        // Fallback: reuse walk for idle
         this.bakedIdleBuffer = this.bakedWalkBuffer;
         this.numIdleFrames = this.numWalkFrames;
         this.idleDuration = this.walkDuration;
+      }
+
+      if (talkClip) {
+        const talkData = this.bakeAnimation(firstMesh, talkClip, model);
+        this.bakedTalkBuffer = talkData.buffer;
+        this.numTalkFrames = talkData.numFrames;
+        this.talkDuration = talkData.duration;
+      } else {
+        this.bakedTalkBuffer = this.bakedIdleBuffer;
+        this.numTalkFrames = this.numIdleFrames;
+        this.talkDuration = this.idleDuration;
       }
       this.initInstances();
       this.isLoaded = true;
@@ -153,21 +177,25 @@ export class CharacterManager {
   }
 
   public update(delta: number, renderer: any) {
+    if (this.expressionBuffer) {
+      this.expressionBuffer.update(delta);
+    }
     if (this.computeNode) {
       renderer.compute(this.computeNode);
     }
   }
 
   private cleanupInstances() {
-    if (this.instancedMesh) {
-      this.scene.remove(this.instancedMesh);
-      this.instancedMesh = null;
+    for (const mesh of this.instancedMeshes) {
+      this.scene.remove(mesh);
     }
+    this.instancedMeshes = [];
     this.computeNode = null;
+    this.expressionBuffer = null;
   }
 
   private initInstances() {
-    if (!this.baseGeometry || !this.baseMaterial) return;
+    if (this.meshData.length === 0) return;
 
     const posArray = new Float32Array(this.instanceCount * 4);
     const velArray = new Float32Array(this.instanceCount * 4);
@@ -179,19 +207,21 @@ export class CharacterManager {
 
     for (let i = 0; i < this.instanceCount; i++) {
       const agent = AGENTS[i] || AGENTS[0];
+      const colorOverride = this.colors && this.colors[i] ? this.colors[i] : agent.color;
+
       if (i === PLAYER_INDEX) {
         // Player spawns slightly offset from center so they're clearly visible
         posArray[i * 4 + 0] = 0;
         posArray[i * 4 + 2] = 0;
         posArray[i * 4 + 3] = 1;
-        tempColor.set(agent.color);
+        tempColor.set(colorOverride);
       } else {
         posArray[i * 4 + 0] = (Math.random() - 0.5) * spawnRadius * 2;
         posArray[i * 4 + 2] = (Math.random() - 0.5) * spawnRadius * 2;
         posArray[i * 4 + 3] = 1;
         velArray[i * 4 + 0] = (Math.random() - 0.5) * 0.1;
         velArray[i * 4 + 2] = (Math.random() - 0.5) * 0.1;
-        tempColor.set(agent.color);
+        tempColor.set(colorOverride);
       }
 
       timeOffsetArray[i] = Math.random() * 10;
@@ -216,6 +246,8 @@ export class CharacterManager {
     this.agentStateBuffer = new AgentStateBuffer(this.instanceCount);
     this.agentStateBuffer.setState(PLAYER_INDEX, AgentBehavior.FROZEN);
 
+    this.expressionBuffer = new ExpressionBuffer(this.instanceCount);
+
     this.initComputeNode();
     this.createInstancedMesh();
   }
@@ -233,11 +265,15 @@ export class CharacterManager {
 
       const pos = posElement.xyz.toVar();
 
-      // ── FROZEN (state ≈ 1, between 0.5 and 1.5) ─────────────
-      If(agentState.greaterThan(float(0.5)), () => {
+      // ── FROZEN or TALK (state ≈ 1 or 3) ──────────────────────
+      const isFrozen = agentState.greaterThan(float(0.5)).and(agentState.lessThan(float(1.5)));
+      const isTalk = agentState.greaterThan(float(2.5));
+      const shouldStay = isFrozen.or(isTalk);
 
-        // ── GOTO (state ≈ 2, > 1.5) ───────────────────────────
-        If(agentState.greaterThan(float(1.5)), () => {
+      If(shouldStay.or(agentState.greaterThan(float(1.5))), () => {
+
+        // ── GOTO (state ≈ 2, between 1.5 and 2.5) ─────────────
+        If(agentState.greaterThan(float(1.5)).and(agentState.lessThan(float(2.5))), () => {
           const waypointXZ = vec3(agentData.x, float(0), agentData.z);
           const toTarget = waypointXZ.sub(pos);
           const dist = toTarget.length();
@@ -250,7 +286,7 @@ export class CharacterManager {
           });
 
         }).Else(() => {
-          // FROZEN — hold position, use agentData.xz as facing direction if non-zero
+          // FROZEN or TALK — hold position, use agentData.xz as facing direction if non-zero
           const facing = vec3(agentData.x, float(0), agentData.z);
           If(facing.length().greaterThan(float(0.001)), () => {
             velElement.assign(vec4(facing, 0.0));
@@ -295,35 +331,60 @@ export class CharacterManager {
   }
 
   private createInstancedMesh() {
-    const instancedGeometry = new THREE.InstancedBufferGeometry();
-    instancedGeometry.copy(this.baseGeometry as any);
-    instancedGeometry.instanceCount = this.instanceCount;
+    for (const { name, geometry, material: baseMaterial } of this.meshData) {
+      const instancedGeometry = new THREE.InstancedBufferGeometry();
+      instancedGeometry.copy(geometry as any);
+      instancedGeometry.instanceCount = this.instanceCount;
 
-    // Solo dejamos el atributo que NO se calcula en el Compute Shader
-    if (this.timeOffsetAttribute) instancedGeometry.setAttribute('instanceTimeOffset', this.timeOffsetAttribute);
-    if (this.colorAttribute) instancedGeometry.setAttribute('instanceColor', this.colorAttribute);
+      // Solo dejamos el atributo que NO se calcula en el Compute Shader
+      if (this.timeOffsetAttribute) instancedGeometry.setAttribute('instanceTimeOffset', this.timeOffsetAttribute);
+      if (this.colorAttribute) instancedGeometry.setAttribute('instanceColor', this.colorAttribute);
 
-    const material = new THREE.MeshStandardNodeMaterial();
-    material.roughness = 1;
-    material.metalness = 0.25;
+      const material = new THREE.MeshStandardNodeMaterial();
+      material.roughness = 1;
+      material.metalness = 0.25;
 
-    const map = (this.baseMaterial as any).map;
-    const instanceColor = attribute('instanceColor', 'vec3');
+      const instanceColor = attribute('instanceColor', 'vec3');
+      const map = (baseMaterial as any).map;
 
-    if (map) {
-      const texColor = texture(map);
-      material.colorNode = vec4(texColor.rgb.mul(instanceColor), texColor.a);
-    } else {
-      material.colorNode = vec4(instanceColor, 1.0);
+      const expressionData = this.expressionBuffer!.storageNode.element(instanceIndex);
+      const isEyes = name.toLowerCase().includes('eyes');
+      const isMouth = name.toLowerCase().includes('mouth');
+
+      if (isEyes) {
+        material.uvNode = uv().add(expressionData.xy);
+      } else if (isMouth) {
+        material.uvNode = uv().add(expressionData.zw);
+      }
+
+      // Solo coloreamos el mesh cuyo nombre sea 'body'
+      if (name.toLowerCase().includes('body')) {
+        if (map) {
+          const texColor = texture(map);
+          material.colorNode = vec4(texColor.rgb.mul(instanceColor), texColor.a);
+        } else {
+          material.colorNode = vec4(instanceColor, 1.0);
+        }
+      } else {
+        // Los otros respetan la transparencia original de su mapa PNG
+        material.transparent = true;
+        if (map) {
+          const texColor = isEyes || isMouth ? texture(map, material.uvNode) : texture(map);
+          material.colorNode = texColor; // Usa el color y el canal alfa original de la textura
+        } else {
+          material.opacityNode = float(0);
+        }
+      }
+
+      material.positionNode = this.createVertexNode();
+
+      const instancedMesh = new THREE.Mesh(instancedGeometry, material);
+      instancedMesh.frustumCulled = false;
+      instancedMesh.castShadow = true;
+      instancedMesh.receiveShadow = true;
+      this.scene.add(instancedMesh);
+      this.instancedMeshes.push(instancedMesh);
     }
-
-    material.positionNode = this.createVertexNode();
-
-    this.instancedMesh = new THREE.Mesh(instancedGeometry, material);
-    this.instancedMesh.frustumCulled = false;
-    this.instancedMesh.castShadow = true;
-    this.instancedMesh.receiveShadow = true;
-    this.scene.add(this.instancedMesh);
   }
 
   private createVertexNode() {
@@ -347,17 +408,19 @@ export class CharacterManager {
 
       const finalPosition = positionLocal.toVar();
 
-      if (this.bakedWalkBuffer && this.bakedIdleBuffer) {
+      if (this.bakedWalkBuffer && this.bakedIdleBuffer && this.bakedTalkBuffer) {
         const walkBuffer = storage(this.bakedWalkBuffer, 'mat4', this.numWalkFrames * this.numBones);
         const idleBuffer = storage(this.bakedIdleBuffer, 'mat4', this.numIdleFrames * this.numBones);
+        const talkBuffer = storage(this.bakedTalkBuffer, 'mat4', this.numTalkFrames * this.numBones);
         const agentState = this.agentStateBuffer!.storageNode.element(instanceIndex).w;
 
         const skinIndex = attribute('skinIndex');
         const skinWeight = attribute('skinWeight');
         const skinMat = mat4(0).toVar();
 
-        // FROZEN (state ≈ 1) uses idle animation; BOIDS and GOTO use walk animation
+        // Animation selection based on AgentBehavior
         const isFrozen = agentState.greaterThan(float(0.5)).and(agentState.lessThan(float(1.5)));
+        const isTalk = agentState.greaterThan(float(2.5));
 
         const buildSkinMat = (animBuf: any, numFrames: number, duration: number) => {
           const animTime = time.add(timeOffset);
@@ -379,7 +442,11 @@ export class CharacterManager {
         If(isFrozen, () => {
           buildSkinMat(idleBuffer, this.numIdleFrames, this.idleDuration);
         }).Else(() => {
-          buildSkinMat(walkBuffer, this.numWalkFrames, this.walkDuration);
+          If(isTalk, () => {
+            buildSkinMat(talkBuffer, this.numTalkFrames, this.talkDuration);
+          }).Else(() => {
+            buildSkinMat(walkBuffer, this.numWalkFrames, this.walkDuration);
+          });
         });
 
         finalPosition.assign(skinMat.mul(vec4(positionLocal, 1.0)).xyz);
@@ -437,6 +504,32 @@ export class CharacterManager {
   public getAgentState(index: number): number {
     if (!this.agentStateBuffer || index < 0 || index >= this.instanceCount) return 0;
     return this.agentStateBuffer.getState(index);
+  }
+
+  public setExpression(index: number, name: ExpressionKey) {
+    if (this.expressionBuffer) {
+      this.expressionBuffer.setExpression(index, name);
+    }
+  }
+
+  public setSpeaking(index: number, isSpeaking: boolean) {
+    if (this.expressionBuffer) {
+      this.expressionBuffer.setSpeaking(index, isSpeaking);
+    }
+    if (this.agentStateBuffer) {
+      if (isSpeaking) {
+        const currentState = this.agentStateBuffer.getState(index);
+        // Solo cambiamos el estado de animación a TALK si no se está moviendo (GOTO/BOIDS)
+        if (currentState !== AgentBehavior.GOTO && currentState !== AgentBehavior.BOIDS) {
+          this.agentStateBuffer.setState(index, AgentBehavior.TALK);
+        }
+      } else {
+        // Al dejar de hablar volvemos a FROZEN si estábamos en estado TALK
+        if (this.agentStateBuffer.getState(index) === AgentBehavior.TALK) {
+          this.agentStateBuffer.setState(index, AgentBehavior.FROZEN);
+        }
+      }
+    }
   }
 
   public setColors(hexColors: string[]) {

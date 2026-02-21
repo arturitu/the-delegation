@@ -54,6 +54,14 @@ export class SceneManager {
         stateBuffer,
         AGENTS,
         (encounter) => useStore.getState().setActiveEncounter(encounter),
+        (index, isSpeaking) => this.characters.setSpeaking(index, isSpeaking),
+        (npcIndex) => {
+          // Player arrived at NPC -> Start thinking/talking
+          const state = useStore.getState();
+          if (state.isChatting && state.selectedNpcIndex === npcIndex) {
+            this.handleNpcGreeting(npcIndex);
+          }
+        }
       );
     }
 
@@ -63,21 +71,21 @@ export class SceneManager {
       () => this.characters.getCPUPositions(),
       () => this.characters.getCount(),
       (index) => {
+        const state = useStore.getState();
+        // If we are chatting, end it before changing selection
+        if (state.isChatting) {
+          state.endChat();
+        }
+
         this.selectedIndex = index;
         // Update store: null = default (follow player), number = selected NPC
         useStore.getState().setSelectedNpc(index !== PLAYER_INDEX ? index : null);
-        
-        // If we click anywhere (even the same NPC or floor), and we are chatting, end it.
-        // The user wants to end chat when clicking on the scene.
-        if (useStore.getState().isChatting) {
-          useStore.getState().endChat();
-        }
       },
-      (x, z) => { 
+      (x, z) => {
         const { worldSize } = useStore.getState();
         // Constrain to grid boundaries
         if (Math.abs(x) <= worldSize && Math.abs(z) <= worldSize) {
-          this.behaviorManager?.setPlayerWaypoint(x, z); 
+          this.behaviorManager?.setPlayerWaypoint(x, z);
         }
       },
       (index, pos) => { useStore.getState().setHoveredNpc(index, pos); },
@@ -88,53 +96,22 @@ export class SceneManager {
         const positions = this.characters.getCPUPositions();
         if (positions) {
           this.behaviorManager?.startChat(index, positions);
-          useStore.setState({ 
+
+          useStore.setState({
+            selectedNpcIndex: index,
             isChatting: true,
             chatMessages: [],
-            isThinking: true
+            isThinking: false
           });
-
-          // Auto-presentation
-          const agent = AGENTS[index];
-          try {
-            const systemInstruction = `You are ${agent.role} at FakeClaw Inc. 
-Department: ${agent.department}
-Mission: ${agent.mission}
-Personality: ${agent.personality}
-Expertise: ${agent.expertise.join(', ')}
-
-Keep your responses extremely brief (1-2 short sentences max) and professional. Introduce yourself very briefly and ask how you can help.`;
-
-            const responseText = await geminiService.chat(
-              systemInstruction,
-              [],
-              "Hello! Please introduce yourself briefly."
-            );
-
-            const modelMessage: ChatMessage = {
-              role: 'model',
-              text: responseText,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
-
-            useStore.setState((s) => ({ 
-              chatMessages: [modelMessage],
-              isThinking: false 
-            }));
-            
-            this.characters.fadeToAction('Wave');
-            setTimeout(() => this.characters.fadeToAction('Idle'), 2000);
-          } catch (error) {
-            console.error("Auto-presentation error:", error);
-            useStore.setState({ isThinking: false });
-          }
         }
       },
       endChat: () => {
         const { selectedNpcIndex } = useStore.getState();
         this.behaviorManager?.endChat(selectedNpcIndex);
-        useStore.setState({ 
+        useStore.setState({
           isChatting: false,
+          isTyping: false,
+          isThinking: false,
           chatMessages: []
         });
       },
@@ -144,20 +121,21 @@ Keep your responses extremely brief (1-2 short sentences max) and professional. 
 
         const agent = AGENTS[state.selectedNpcIndex];
         const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
+
         const userMessage: ChatMessage = {
           role: 'user',
           text,
           timestamp
         };
 
-        useStore.setState((s) => ({ 
+        useStore.setState((s) => ({
           chatMessages: [...s.chatMessages, userMessage],
-          isThinking: true 
+          isThinking: true,
+          isTyping: false
         }));
 
         try {
-          const systemInstruction = `You are ${agent.role} at FakeClaw Inc. 
+          const systemInstruction = `You are ${agent.role} at FakeClaw Inc.
 Department: ${agent.department}
 Mission: ${agent.mission}
 Personality: ${agent.personality}
@@ -177,11 +155,11 @@ Keep your responses extremely brief (1-2 short sentences max) and professional, 
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           };
 
-          useStore.setState((s) => ({ 
+          useStore.setState((s) => ({
             chatMessages: [...s.chatMessages, modelMessage],
-            isThinking: false 
+            isThinking: false
           }));
-          
+
           this.characters.fadeToAction('Wave');
           setTimeout(() => this.characters.fadeToAction('Idle'), 2000);
 
@@ -210,6 +188,29 @@ Keep your responses extremely brief (1-2 short sentences max) and professional, 
       if (state.worldSize !== prevState.worldSize) {
         this.characters.updateWorldSize(state.worldSize);
         this.stage.updateDimensions(state.worldSize);
+      }
+
+      // Handle Speaking Animation trigger
+      if (state.lastSpeakingTrigger !== prevState.lastSpeakingTrigger && state.lastSpeakingTrigger) {
+        this.characters.setSpeaking(state.lastSpeakingTrigger.index, state.lastSpeakingTrigger.isSpeaking);
+      }
+
+      // Handle Player Thinking/Speaking during chat
+      if (state.isChatting !== prevState.isChatting || state.isThinking !== prevState.isThinking || state.isTyping !== prevState.isTyping) {
+        if (state.isChatting && state.selectedNpcIndex !== null) {
+          // NPC speaks when thinking (model response)
+          this.characters.setSpeaking(state.selectedNpcIndex, state.isThinking);
+
+          // Player speaks when typing
+          this.characters.setSpeaking(PLAYER_INDEX, state.isTyping);
+        } else if (!state.isChatting && prevState.isChatting) {
+          // Chat ended - clean up whichever NPC was chatting
+          const prevNpcIndex = prevState.selectedNpcIndex;
+          if (prevNpcIndex !== null) {
+            this.characters.setSpeaking(prevNpcIndex, false);
+          }
+          this.characters.setSpeaking(PLAYER_INDEX, false);
+        }
       }
     });
 
@@ -262,7 +263,7 @@ Keep your responses extremely brief (1-2 short sentences max) and professional, 
         const screenPos = npcPos.clone();
         screenPos.y += 1.3; // CHARACTER_Y_OFFSET + bubble offset
         screenPos.project(this.stage.camera);
-        
+
         const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
         const y = (screenPos.y * -0.5 + 0.5) * window.innerHeight;
         setSelectedPosition({ x, y });
@@ -303,6 +304,44 @@ Keep your responses extremely brief (1-2 short sentences max) and professional, 
     this.engine.render(this.stage.scene, this.stage.camera);
 
     this.updateStats(time);
+  }
+
+  private async handleNpcGreeting(npcIndex: number) {
+    const agent = AGENTS[npcIndex];
+    useStore.setState({ isThinking: true });
+
+    try {
+      const systemInstruction = `You are ${agent.role} at FakeClaw Inc.
+Department: ${agent.department}
+Mission: ${agent.mission}
+Personality: ${agent.personality}
+Expertise: ${agent.expertise.join(', ')}
+
+Keep your responses extremely brief (1-2 short sentences max) and professional. Introduce yourself very briefly and ask how you can help.`;
+
+      const responseText = await geminiService.chat(
+        systemInstruction,
+        [],
+        "Hello! Please introduce yourself briefly."
+      );
+
+      const modelMessage: ChatMessage = {
+        role: 'model',
+        text: responseText,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      useStore.setState((s) => ({
+        chatMessages: [modelMessage],
+        isThinking: false
+      }));
+
+      this.characters.fadeToAction('Wave');
+      setTimeout(() => this.characters.fadeToAction('Idle'), 2000);
+    } catch (error) {
+      console.error("Auto-presentation error:", error);
+      useStore.setState({ isThinking: false });
+    }
   }
 
   private updateStats(time: number) {

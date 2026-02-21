@@ -38,12 +38,16 @@ export interface CharacterState {
   hoveredNpcIndex: number | null;     // NPC currently under the cursor
   hoverPosition: { x: number; y: number } | null; // Screen coordinates for hover bubble
   isChatting: boolean;
+  isTyping: boolean; // Player is typing in textarea
   chatMessages: ChatMessage[];
 
   performance: PerformanceStats;
+  lastSpeakingTrigger: { index: number, isSpeaking: boolean, timestamp: number } | null;
 
   setAnimation: (name: string) => void;
+  setSpeaking: (index: number, isSpeaking: boolean) => void;
   setThinking: (isThinking: boolean) => void;
+  setIsTyping: (isTyping: boolean) => void;
   setAIResponse: (response: string) => void;
   toggleDebug: () => void;
   setInstanceCount: (count: number) => void;
@@ -71,6 +75,7 @@ export enum AgentBehavior {
   BOIDS = 0,   // follows Reynolds separation
   FROZEN = 1,  // position locked, velocity zero
   GOTO = 2,    // moves toward waypoint (.x/.z of agent buffer)
+  TALK = 3,    // position locked, playing talk animation
 }
 
 export interface ActiveEncounter {
@@ -79,4 +84,16 @@ export interface ActiveEncounter {
   npcRole: string;
   npcMission: string;
   npcPersonality: string;
+}
+
+export type ExpressionKey = 'idle' | 'listening' | 'neutral' | 'surprised' | 'happy' | 'sick' | 'wink' | 'doubtful' | 'sad';
+
+export interface AtlasCoords {
+  col: number;
+  row: number;
+}
+
+export interface ExpressionConfig {
+  eyes: AtlasCoords;
+  mouth: AtlasCoords;
 }

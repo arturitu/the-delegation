@@ -5,23 +5,26 @@ import { Send, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const ChatPanel: React.FC = () => {
-  const { 
-    isChatting, 
-    chatMessages, 
-    sendMessage, 
-    isThinking, 
-    selectedNpcIndex 
+  const {
+    isChatting,
+    chatMessages,
+    sendMessage,
+    isThinking,
+    selectedNpcIndex,
+    setIsTyping
   } = useStore();
-  
+
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const stopTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const agent = selectedNpcIndex !== null ? AGENTS[selectedNpcIndex] : null;
 
   useEffect(() => {
     return () => {
       if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
+      if (stopTypingTimeoutRef.current) clearTimeout(stopTypingTimeoutRef.current);
     };
   }, []);
 
@@ -35,6 +38,8 @@ const ChatPanel: React.FC = () => {
     let currentIndex = 0;
     if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
 
+    setIsTyping(true);
+
     typingIntervalRef.current = setInterval(() => {
       if (currentIndex < text.length) {
         const char = text[currentIndex];
@@ -42,6 +47,7 @@ const ChatPanel: React.FC = () => {
         currentIndex++;
       } else {
         if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
+        setIsTyping(false);
       }
     }, 20); // 20ms per character for a natural feel
   };
@@ -55,6 +61,9 @@ const ChatPanel: React.FC = () => {
   const handleSend = async () => {
     if (!input.trim() || isThinking) return;
     if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
+    if (stopTypingTimeoutRef.current) clearTimeout(stopTypingTimeoutRef.current);
+    setIsTyping(false);
+
     const text = input;
     setInput('');
     await sendMessage(text);
@@ -63,16 +72,16 @@ const ChatPanel: React.FC = () => {
   if (!isChatting || !agent) return null;
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ x: '100%' }}
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="fixed top-0 right-0 w-[400px] h-full bg-white border-l border-zinc-100 shadow-2xl z-50 flex flex-col pointer-events-auto overflow-hidden"
+      className="fixed top-0 right-0 w-100 h-full bg-white border-l border-zinc-100 shadow-2xl z-50 flex flex-col pointer-events-auto overflow-hidden"
     >
       {/* Color accent bar */}
-      <div 
-        className="absolute top-0 left-0 w-full h-1.5 z-20" 
+      <div
+        className="absolute top-0 left-0 w-full h-1.5 z-20"
         style={{ backgroundColor: agent.color }}
       />
       {/* Header */}
@@ -87,13 +96,13 @@ const ChatPanel: React.FC = () => {
       </div>
 
       {/* Messages */}
-      <div 
+      <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-8 space-y-10 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:display-none"
       >
         <AnimatePresence initial={false}>
           {chatMessages.map((msg, i) => (
-            <motion.div 
+            <motion.div
               key={i}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -114,16 +123,16 @@ const ChatPanel: React.FC = () => {
                     </div>
                   )}
                 </div>
-                
+
                 <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                   <div className={`px-4 py-2.5 rounded-[20px] text-[14px] leading-relaxed shadow-sm ${
-                    msg.role === 'user' 
-                    ? 'bg-blue-50/50 text-zinc-800 rounded-tr-none border border-blue-100/50' 
+                    msg.role === 'user'
+                    ? 'bg-blue-50/50 text-zinc-800 rounded-tr-none border border-blue-100/50'
                     : 'bg-zinc-50 text-zinc-800 rounded-tl-none border border-zinc-100'
                   }`}>
                     {msg.text}
                   </div>
-                  
+
                   <div className={`flex items-center gap-2 mt-2 px-1`}>
                     <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                       {msg.role === 'user' ? 'You' : agent.role.split(' ')[0]}
@@ -139,7 +148,7 @@ const ChatPanel: React.FC = () => {
         </AnimatePresence>
 
         {isThinking && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="flex items-start gap-3"
@@ -166,7 +175,19 @@ const ChatPanel: React.FC = () => {
           <div className="flex-1 relative">
             <textarea
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setInput(val);
+
+                // Show player talking animation while typing
+                if (val.length > 0) {
+                  setIsTyping(true);
+                  if (stopTypingTimeoutRef.current) clearTimeout(stopTypingTimeoutRef.current);
+                  stopTypingTimeoutRef.current = setTimeout(() => setIsTyping(false), 1000);
+                } else {
+                  setIsTyping(false);
+                }
+              }}
               onPaste={handlePaste}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -175,14 +196,14 @@ const ChatPanel: React.FC = () => {
                 }
               }}
               placeholder="Message (↵ to send)"
-              className="w-full bg-white border border-zinc-200 rounded-2xl px-4 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all resize-none h-[56px] pr-12 [scrollbar-width:none]"
+              className="w-full bg-white border border-zinc-200 rounded-2xl px-4 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all resize-none h-14 pr-12 [scrollbar-width:none]"
             />
           </div>
           <button
             onClick={handleSend}
             disabled={!input.trim() || isThinking}
             style={{ backgroundColor: !input.trim() || isThinking ? undefined : agent.color }}
-            className={`h-[56px] px-6 rounded-2xl flex items-center gap-2 font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${
+            className={`h-14 px-6 rounded-2xl flex items-center gap-2 font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${
               !input.trim() || isThinking
               ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
               : 'text-white shadow-lg hover:brightness-90'
