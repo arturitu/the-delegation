@@ -1,21 +1,4 @@
 
-export interface PerformanceStats {
-  fps: number;
-  drawCalls: number;
-  triangles: number;
-  geometries: number;
-  textures: number;
-  entities: number;
-}
-
-export interface BoidsParams {
-  speed: number;
-  separationRadius: number;
-  separationStrength: number;
-  alignmentRadius: number;
-  cohesionRadius: number;
-}
-
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
@@ -23,15 +6,10 @@ export interface ChatMessage {
 }
 
 export interface CharacterState {
-  currentAction: string;
   isThinking: boolean;
   aiResponse: string;
-  isDebugOpen: boolean;
   instanceCount: number;
   worldSize: number;
-  boidsParams: BoidsParams;
-  debugPositions: Float32Array | null;
-  debugStates: Float32Array | null;    // vec4 stride: .w = AgentBehavior per instance
   activeEncounter: ActiveEncounter | null;
   selectedNpcIndex: number | null;    // NPC explicitly clicked in the scene
   selectedPosition: { x: number; y: number } | null; // Screen coordinates for selected bubble
@@ -41,20 +19,14 @@ export interface CharacterState {
   isTyping: boolean; // Player is typing in textarea
   chatMessages: ChatMessage[];
 
-  performance: PerformanceStats;
   lastSpeakingTrigger: { index: number, isSpeaking: boolean, timestamp: number } | null;
 
-  setAnimation: (name: string) => void;
   setSpeaking: (index: number, isSpeaking: boolean) => void;
   setThinking: (isThinking: boolean) => void;
   setIsTyping: (isTyping: boolean) => void;
   setAIResponse: (response: string) => void;
-  toggleDebug: () => void;
   setInstanceCount: (count: number) => void;
   setWorldSize: (size: number) => void;
-  setBoidsParams: (params: Partial<BoidsParams>) => void;
-  setDebugPositions: (positions: Float32Array) => void;
-  setDebugStates: (states: Float32Array) => void;
   setActiveEncounter: (encounter: ActiveEncounter | null) => void;
   setSelectedNpc: (index: number | null) => void;
   setSelectedPosition: (pos: { x: number; y: number } | null) => void;
@@ -62,7 +34,6 @@ export interface CharacterState {
   startChat: (index: number) => void;
   endChat: () => void;
   sendMessage: (text: string) => Promise<void>;
-  updatePerformance: (stats: PerformanceStats) => void;
 }
 
 export enum AnimationName {
@@ -72,7 +43,7 @@ export enum AnimationName {
 
 /** Stored as a float in the GPU agent buffer (.w component). */
 export enum AgentBehavior {
-  BOIDS = 0,   // follows Reynolds separation
+  IDLE = 0,    // position locked, velocity zero (previously BOIDS)
   FROZEN = 1,  // position locked, velocity zero
   GOTO = 2,    // moves toward waypoint (.x/.z of agent buffer)
   TALK = 3,    // position locked, playing talk animation

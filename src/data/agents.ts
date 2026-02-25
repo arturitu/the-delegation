@@ -4,8 +4,8 @@
 export const COMPANY_NAME = 'FakeClaw Inc.';
 export const PLAYER_INDEX = 0;
 export const NPC_START_INDEX = 1;
-export const TOTAL_COUNT = 2000;
-export const NPC_COUNT = TOTAL_COUNT - 1; // 1999
+export const TOTAL_COUNT = 10;
+export const NPC_COUNT = TOTAL_COUNT - 1; // 9
 
 // ─────────────────────────────────────────────────────────────
 //  Agent data types

@@ -9,7 +9,7 @@ import { AgentBehavior } from '../../types';
  *   .x = waypoint X  (used when state == GOTO)
  *   .y = 0           (reserved)
  *   .z = waypoint Z  (used when state == GOTO)
- *   .w = AgentBehavior  (0 = BOIDS, 1 = FROZEN, 2 = GOTO)
+ *   .w = AgentBehavior  (0 = IDLE, 1 = FROZEN, 2 = GOTO)
  *
  * CPU writes states/waypoints, GPU shader reads them.
  * Setting a value marks the attribute `needsUpdate = true` automatically.

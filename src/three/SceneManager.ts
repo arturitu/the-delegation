@@ -41,7 +41,6 @@ export class SceneManager {
 
     // Initial sync
     this.characters.setInstanceCount(state.instanceCount);
-    this.characters.updateBoidsParams(state.boidsParams);
     this.characters.updateWorldSize(state.worldSize);
     this.stage.updateDimensions(state.worldSize);
 
@@ -160,9 +159,6 @@ Keep your responses extremely brief (1-2 short sentences max) and professional, 
             isThinking: false
           }));
 
-          this.characters.fadeToAction('Wave');
-          setTimeout(() => this.characters.fadeToAction('Idle'), 2000);
-
         } catch (error) {
           console.error("Gemini Error:", error);
           useStore.setState({ isThinking: false });
@@ -170,18 +166,9 @@ Keep your responses extremely brief (1-2 short sentences max) and professional, 
       }
     });
 
-    // Subscriptions
-    const sub1 = useStore.subscribe((state) => {
-      this.characters.fadeToAction(state.currentAction);
-    });
-
     const sub2 = useStore.subscribe((state, prevState) => {
       if (state.instanceCount !== prevState.instanceCount) {
         this.characters.setInstanceCount(state.instanceCount);
-      }
-      // Update Uniforms when params change
-      if (state.boidsParams !== prevState.boidsParams) {
-        this.characters.updateBoidsParams(state.boidsParams);
       }
 
       // Update World Size
@@ -214,7 +201,7 @@ Keep your responses extremely brief (1-2 short sentences max) and professional, 
       }
     });
 
-    this.unsubs.push(sub1, sub2);
+    this.unsubs.push(sub2);
   }
 
   private onResize() {
@@ -235,19 +222,11 @@ Keep your responses extremely brief (1-2 short sentences max) and professional, 
     this.characters.update(delta, this.engine.renderer);
 
     // 2. GPU → CPU readback (async, 1-frame lag). Keeps debugPosArray in sync with the compute shader.
-    //    Used for picking, camera follow, and the debug canvas/markers.
-    const { isDebugOpen } = useStore.getState();
+    //    Used for picking, camera follow.
     this.characters.syncFromGPU(this.engine.renderer).then((positions) => {
       if (!positions) return;
       // Run behavior logic with fresh GPU positions
       this.behaviorManager?.update(positions);
-      if (isDebugOpen) {
-        useStore.getState().setDebugPositions(new Float32Array(positions));
-        const stateBuffer = this.characters.getAgentStateBuffer();
-        if (stateBuffer) {
-          useStore.getState().setDebugStates(new Float32Array(stateBuffer.array));
-        }
-      }
     });
 
     // 3. Camera follow: NPC if one is selected, otherwise always follow the player
@@ -302,8 +281,6 @@ Keep your responses extremely brief (1-2 short sentences max) and professional, 
     }
 
     this.engine.render(this.stage.scene, this.stage.camera);
-
-    this.updateStats(time);
   }
 
   private async handleNpcGreeting(npcIndex: number) {
@@ -335,33 +312,9 @@ Keep your responses extremely brief (1-2 short sentences max) and professional. 
         chatMessages: [modelMessage],
         isThinking: false
       }));
-
-      this.characters.fadeToAction('Wave');
-      setTimeout(() => this.characters.fadeToAction('Idle'), 2000);
     } catch (error) {
       console.error("Auto-presentation error:", error);
       useStore.setState({ isThinking: false });
-    }
-  }
-
-  private updateStats(time: number) {
-    this.frameCount++;
-    if (this.frameCount >= 20) {
-      const fps = Math.round(20 / (time - this.lastTime));
-      const info = this.engine.renderer.info;
-      const count = this.characters.getCount();
-
-      useStore.getState().updatePerformance({
-        fps,
-        drawCalls: info.render.drawCalls,
-        triangles: info.render.triangles,
-        geometries: info.memory.geometries,
-        textures: info.memory.textures,
-        entities: count
-      });
-
-      this.frameCount = 0;
-      this.lastTime = time;
     }
   }
 

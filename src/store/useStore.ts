@@ -1,27 +1,14 @@
 
 import { create } from 'zustand';
-import { CharacterState, AnimationName, PerformanceStats, BoidsParams, ActiveEncounter } from '../types';
+import { CharacterState, AnimationName, ActiveEncounter } from '../types';
 
 export const useStore = create<CharacterState>()(
   (set) => ({
-    currentAction: AnimationName.WALK,
     isThinking: false,
     aiResponse: "Hello! I'm your AI character. Type something to talk to me.",
-    isDebugOpen: false,
-    instanceCount: 100,
-    worldSize: 25,      // radius of Kaldera
+    instanceCount: 10,
+    worldSize: 10,      // radius of Kaldera
 
-    // Default Boids Parameters
-    boidsParams: {
-      speed: 0.025,
-      separationRadius: 0.6,
-      separationStrength: 0.030,
-      alignmentRadius: 3.0,
-      cohesionRadius: 3.0
-    },
-
-    debugPositions: null,
-    debugStates: null,
     activeEncounter: null,
     selectedNpcIndex: null,
     selectedPosition: null,
@@ -31,34 +18,17 @@ export const useStore = create<CharacterState>()(
     isTyping: false,
     chatMessages: [],
 
-    performance: {
-      fps: 0,
-      drawCalls: 0,
-      triangles: 0,
-      geometries: 0,
-      textures: 0,
-      entities: 0
-    },
-
     lastSpeakingTrigger: null,
 
-    setAnimation: (name: string) => set({ currentAction: name }),
     setSpeaking: (index: number, isSpeaking: boolean) => set({
       lastSpeakingTrigger: { index, isSpeaking, timestamp: Date.now() }
     }),
     setThinking: (isThinking: boolean) => set({ isThinking }),
     setIsTyping: (isTyping: boolean) => set({ isTyping }),
     setAIResponse: (aiResponse: string) => set({ aiResponse }),
-    toggleDebug: () => set((state) => ({ isDebugOpen: !state.isDebugOpen })),
     setInstanceCount: (count: number) => set({ instanceCount: count }),
     setWorldSize: (size: number) => set({ worldSize: size }),
 
-    setBoidsParams: (params) => set((state) => ({
-      boidsParams: { ...state.boidsParams, ...params }
-    })),
-
-    setDebugPositions: (positions) => set({ debugPositions: positions }),
-    setDebugStates: (states) => set({ debugStates: states }),
     setActiveEncounter: (encounter: ActiveEncounter | null) => set({ activeEncounter: encounter }),
     setSelectedNpc: (index: number | null) => set({ selectedNpcIndex: index, selectedPosition: null }),
     setSelectedPosition: (pos: { x: number; y: number } | null) => set({ selectedPosition: pos }),
@@ -66,7 +36,5 @@ export const useStore = create<CharacterState>()(
     startChat: () => {},
     endChat: () => {},
     sendMessage: async () => {},
-
-    updatePerformance: (performance: PerformanceStats) => set({ performance }),
   })
 );

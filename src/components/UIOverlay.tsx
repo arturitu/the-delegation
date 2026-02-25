@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
-import DebugPanel from './DebugPanel';
 import HelpModal from './HelpModal';
 import ChatPanel from './ChatPanel';
 import { AGENTS } from '../data/agents';
@@ -9,10 +8,8 @@ import { HelpCircle } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 
 const UIOverlay: React.FC = () => {
-  const { 
-    isThinking, 
-    isDebugOpen, 
-    toggleDebug, 
+  const {
+    isThinking,
     selectedNpcIndex,
     selectedPosition,
     hoveredNpcIndex,
@@ -43,17 +40,17 @@ const UIOverlay: React.FC = () => {
       </AnimatePresence>
       {/* Selected Bubble (Always visible when selected) */}
       {selectedAgent && selectedPosition && (
-        <div 
+        <div
           className="absolute z-10 pointer-events-none transition-all duration-75 ease-out"
-          style={{ 
-            left: selectedPosition.x, 
+          style={{
+            left: selectedPosition.x,
             top: selectedPosition.y,
             transform: 'translate(-50%, -100%) translateY(-10px)'
           }}
         >
           <div className="bg-zinc-800/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-xl flex items-center gap-2 whitespace-nowrap animate-in fade-in zoom-in-95 duration-200">
-            <div 
-              className="w-2 h-2 rounded-full shrink-0" 
+            <div
+              className="w-2 h-2 rounded-full shrink-0"
               style={{ backgroundColor: selectedAgent.color }}
             />
             <div className="flex items-center gap-1.5">
@@ -77,17 +74,17 @@ const UIOverlay: React.FC = () => {
 
       {/* Hover Bubble */}
       {hoveredAgent && hoverPosition && hoveredNpcIndex !== selectedNpcIndex && (
-        <div 
+        <div
           className="absolute z-10 pointer-events-none transition-all duration-75 ease-out"
-          style={{ 
-            left: hoverPosition.x, 
+          style={{
+            left: hoverPosition.x,
             top: hoverPosition.y,
             transform: 'translate(-50%, -100%) translateY(-10px)'
           }}
         >
           <div className="bg-zinc-800/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-xl flex items-center gap-2 whitespace-nowrap animate-in fade-in zoom-in-95 duration-200">
-            <div 
-              className="w-2 h-2 rounded-full shrink-0" 
+            <div
+              className="w-2 h-2 rounded-full shrink-0"
               style={{ backgroundColor: hoveredAgent.color }}
             />
             <div className="flex items-center gap-1.5">
@@ -128,22 +125,7 @@ const UIOverlay: React.FC = () => {
             </p>
           </div>
         </div>
-
-        {/* Debug Button */}
-        <button
-          onClick={toggleDebug}
-          className={`pointer-events-auto px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 border ${
-            isDebugOpen
-            ? 'bg-zinc-900 text-white border-zinc-900 shadow-lg'
-            : 'bg-white/80 text-zinc-500 border-black/5 hover:bg-white hover:text-zinc-900'
-          }`}
-        >
-          {isDebugOpen ? 'Close Debug' : 'Debug'}
-        </button>
       </div>
-
-      {/* Debug Panel Mount */}
-      <DebugPanel />
 
       {/* Help Modal */}
       <HelpModal isOpen={isHelpOpen} onClose={() => setHelpOpen(false)} />
@@ -152,8 +134,8 @@ const UIOverlay: React.FC = () => {
       {selectedAgent && (
         <div className="absolute bottom-8 left-8 w-72 bg-white/85 backdrop-blur-2xl rounded-2xl border border-black/5 shadow-2xl p-5 pointer-events-auto animate-in fade-in slide-in-from-left-4 duration-300 z-30 overflow-hidden">
           {/* Color accent bar */}
-          <div 
-            className="absolute top-0 left-0 w-full h-1" 
+          <div
+            className="absolute top-0 left-0 w-full h-1"
             style={{ backgroundColor: selectedAgent.color }}
           />
           <div className="flex items-start justify-between mb-3">

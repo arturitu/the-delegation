@@ -24,13 +24,13 @@ import {
   uv,
   vec2
 } from 'three/tsl';
-import { BoidsParams, AgentBehavior, ExpressionKey } from '../../types';
+import { AgentBehavior, ExpressionKey } from '../../types';
 import { AgentStateBuffer } from '../behavior/AgentStateBuffer';
 import { ExpressionBuffer } from '../behavior/ExpressionBuffer';
 import { AGENTS, PLAYER_INDEX } from '../../data/agents';
 
 export class CharacterManager {
-  private instanceCount = 100;
+  private instanceCount = 10;
 
   // Compute Buffers (GPU)
   private posAttribute: THREE.StorageInstancedBufferAttribute | null = null;
@@ -57,7 +57,7 @@ export class CharacterManager {
   private meshData: { name: string; geometry: THREE.BufferGeometry; material: THREE.MeshStandardMaterial }[] = [];
   private colors: string[] | null = null;
 
-  // Animation Data (walk = BOIDS/GOTO, idle = FROZEN, talk = TALK)
+  // Animation Data (walk = GOTO, idle = IDLE/FROZEN, talk = TALK)
   private bakedWalkBuffer: THREE.StorageBufferAttribute | null = null;
   private bakedIdleBuffer: THREE.StorageBufferAttribute | null = null;
   private bakedTalkBuffer: THREE.StorageBufferAttribute | null = null;
@@ -71,10 +71,8 @@ export class CharacterManager {
 
   // Uniforms
   private uSpeed = uniform(0.015);
-  private uSeparationRadius = uniform(0.6);
-  private uSeparationStrength = uniform(0.030);
-  private uWorldSize = uniform(20.0);
-  private worldSize = 20.0;
+  private uWorldSize = uniform(10.0);
+  private worldSize = 10.0;
 
   public isLoaded = false;
 
@@ -147,12 +145,6 @@ export class CharacterManager {
       this.cleanupInstances();
       this.initInstances();
     }
-  }
-
-  public updateBoidsParams(params: BoidsParams) {
-    this.uSpeed.value = params.speed;
-    this.uSeparationRadius.value = params.separationRadius;
-    this.uSeparationStrength.value = params.separationStrength;
   }
 
   public updateWorldSize(size: number) {
@@ -240,11 +232,11 @@ export class CharacterManager {
     this.positionStorage = storage(this.posAttribute, 'vec4', this.instanceCount);
     this.velocityStorage = storage(this.velAttribute, 'vec4', this.instanceCount);
 
-    // Agent state buffer — player starts FROZEN, NPCs start BOIDS (0 = default)
+    // Agent state buffer — player and NPCs start IDLE (0 = default)
     // Create BEFORE initComputeNode so the storage node is ready, and set
     // needsUpdate AFTER the attribute is constructed to force the initial upload.
     this.agentStateBuffer = new AgentStateBuffer(this.instanceCount);
-    this.agentStateBuffer.setState(PLAYER_INDEX, AgentBehavior.FROZEN);
+    this.agentStateBuffer.setState(PLAYER_INDEX, AgentBehavior.IDLE);
 
     this.expressionBuffer = new ExpressionBuffer(this.instanceCount);
 
@@ -261,7 +253,7 @@ export class CharacterManager {
       const posElement = this.positionStorage.element(index);
       const velElement = this.velocityStorage.element(index);
       const agentData  = agentStorage.element(index);   // vec4: (wpX, 0, wpZ, state)
-      const agentState = agentData.w;                   // float: 0=BOIDS 1=FROZEN 2=GOTO
+      const agentState = agentData.w;                   // float: 0=IDLE 1=FROZEN 2=GOTO 3=TALK
 
       const pos = posElement.xyz.toVar();
 
@@ -295,36 +287,10 @@ export class CharacterManager {
         });
 
       }).Else(() => {
-        // ── BOIDS (state ≈ 0) ──────────────────────────────────
-        const vel   = velElement.xyz.toVar();
-        const accel = vec3(0).toVar();
-
-        // World boundary (square)
-        const halfSize = this.uWorldSize;
-        If(pos.x.abs().greaterThan(halfSize).or(pos.z.abs().greaterThan(halfSize)), () => {
-          accel.addAssign(pos.negate().normalize().mul(0.01));
-        });
-
-        // Separation
-        Loop({ start: uint(0), end: uint(this.instanceCount), type: 'uint' }, ({ i }) => {
-          const otherPos = this.positionStorage.element(i).xyz;
-          const diff = pos.sub(otherPos);
-          const dist = diff.length();
-          If(dist.lessThan(this.uSeparationRadius).and(dist.greaterThan(0.01)), () => {
-            accel.addAssign(diff.normalize().mul(this.uSeparationStrength));
-          });
-        });
-
-        const newVel = vel.add(accel).toVar();
-        const speed  = newVel.length();
-        If(speed.greaterThan(0.001), () => {
-          newVel.assign(newVel.normalize().mul(this.uSpeed));
-        }).Else(() => {
-          newVel.assign(vec3(0, 0, this.uSpeed));
-        });
-
-        velElement.assign(vec4(newVel, 0.0));
-        posElement.assign(vec4(pos.add(newVel), 1.0));
+        // ── IDLE (state ≈ 0) ──────────────────────────────────
+        // Keep current position, no velocity
+        velElement.assign(vec4(0.0, 0.0, 0.0, 0.0));
+        posElement.assign(vec4(pos, 1.0));
       });
 
     })().compute(this.instanceCount);
@@ -424,8 +390,9 @@ export class CharacterManager {
         const skinWeight = attribute('skinWeight');
         const skinMat = mat4(0).toVar();
 
-        // Animation selection based on AgentBehavior
-        const isFrozen = agentState.greaterThan(float(0.5)).and(agentState.lessThan(float(1.5)));
+        // Animation selection based on AgentBehavior:
+        // 0: IDLE, 1: FROZEN, 2: GOTO, 3: TALK
+        const isIdleOrFrozen = agentState.lessThan(float(1.5));
         const isTalk = agentState.greaterThan(float(2.5));
 
         const buildSkinMat = (animBuf: any, numFrames: number, duration: number) => {
@@ -445,7 +412,7 @@ export class CharacterManager {
           addInfluence(skinIndex.w, skinWeight.w);
         };
 
-        If(isFrozen, () => {
+        If(isIdleOrFrozen, () => {
           buildSkinMat(idleBuffer, this.numIdleFrames, this.idleDuration);
         }).Else(() => {
           If(isTalk, () => {
@@ -487,7 +454,6 @@ export class CharacterManager {
     };
   }
 
-  public fadeToAction(name: string) {}
   public getCount() { return this.instanceCount; }
 
   /** Exposes the agent state buffer so BehaviorManager can read/write states. */
@@ -525,14 +491,14 @@ export class CharacterManager {
     if (this.agentStateBuffer) {
       if (isSpeaking) {
         const currentState = this.agentStateBuffer.getState(index);
-        // Solo cambiamos el estado de animación a TALK si no se está moviendo (GOTO/BOIDS)
-        if (currentState !== AgentBehavior.GOTO && currentState !== AgentBehavior.BOIDS) {
+        // Solo cambiamos el estado de animación a TALK si no se está moviendo (GOTO)
+        if (currentState !== AgentBehavior.GOTO) {
           this.agentStateBuffer.setState(index, AgentBehavior.TALK);
         }
       } else {
-        // Al dejar de hablar volvemos a FROZEN si estábamos en estado TALK
+        // Al dejar de hablar volvemos a IDLE si estábamos en estado TALK
         if (this.agentStateBuffer.getState(index) === AgentBehavior.TALK) {
-          this.agentStateBuffer.setState(index, AgentBehavior.FROZEN);
+          this.agentStateBuffer.setState(index, AgentBehavior.IDLE);
         }
       }
     }

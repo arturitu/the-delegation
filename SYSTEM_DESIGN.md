@@ -6,7 +6,7 @@
 
 ## Overview
 
-A Three.js WebGPU simulation of **FakeClaw Inc.**, a fictional IT company with 100 autonomous agents. One agent is the **CEO (Player)**; the other 99 are **Employees (NPCs)** divided into departments: **Production, Sales, Marketing, and Finance**. All share the same `InstancedMesh`. Physics run on the GPU via a compute shader; state logic runs on CPU and is synced to the GPU each frame.
+A Three.js WebGPU simulation of **FakeClaw Inc.**, a fictional IT company with 10 autonomous agents. One agent is the **CEO (Player)**; the other 9 are **Employees (NPCs)** divided into departments: **Production, Sales, Marketing, and Finance**. All share the same `InstancedMesh`. Physics run on the GPU via a compute shader; state logic runs on CPU and is synced to the GPU each frame.
 
 ---
 
@@ -55,13 +55,13 @@ interface AgentData {
 **Population:**
 
 - `index 0` — Player · name `"You"` · role `"Outsider"` · `lang: "en"`
-- `index 1–99` — NPCs with 99 unique names, 20 roles (cyclic), 30 missions (cyclic), 8 personalities (cyclic)
+- `index 1–9` — NPCs with 9 unique names, 20 roles (cyclic), 30 missions (cyclic), 8 personalities (cyclic)
 
 **City constants:**
 
 ```
 CITY_NAME          = "Bubbylon"
-TOTAL_COUNT        = 100
+TOTAL_COUNT        = 10
 PLAYER_INDEX       = 0
 NPC_START_INDEX    = 1
 ```
@@ -72,7 +72,7 @@ NPC_START_INDEX    = 1
 
 ```typescript
 enum AgentBehavior {
-  BOIDS = 0, // Reynolds separation — GPU compute, autonomous movement
+  IDLE = 0, // Position locked, velocity = 0, animation idle
   FROZEN = 1, // Position locked, velocity = 0, animation idle
   GOTO = 2, // Moving toward a waypoint at uSpeed, then → FROZEN on arrival
 }
@@ -84,20 +84,7 @@ enum AgentBehavior {
 
 ### NPC state machine
 
-```
-         spawn
-           │
-         BOIDS  ◄──────────────────────────┐
-           │                               │
-   dist(i,j) < 0.8 units            timer (4 000 ms)
-     (NPC↔NPC collision)                   │
-           │                               │
-        FROZEN ─────────────────────────────┘
-        (both of the colliding pair)
-```
-
-- Maximum **10 frozen pairs** simultaneously (cap to avoid stacking effects).
-- Only NPCs in `BOIDS` state can trigger a new collision freeze.
+NPCs start in `IDLE` state. They move only when a `GOTO` command is issued (e.g., via function calling).
 
 ### Player state machine
 
@@ -164,21 +151,16 @@ new BehaviorManager(
 
 **`update(positions: Float32Array)` — called each frame after GPU readback:**
 
-| Step | What it does                                                                           |
-| ---- | -------------------------------------------------------------------------------------- |
-| 1    | Expires frozen NPC pairs whose timer has elapsed → both back to `BOIDS`                |
-| 2    | Scans BOIDS NPCs for new collisions → freeze both, register pair with expiry timestamp |
-| 3    | Detects player arrival at GOTO waypoint → `FROZEN`                                     |
-| 4    | Detects nearest NPC within player encounter radius → emits `ActiveEncounter` to store  |
+| Step | What it does                                                                          |
+| ---- | ------------------------------------------------------------------------------------- |
+| 1    | Detects player arrival at GOTO waypoint → `FROZEN`                                    |
+| 2    | Detects nearest NPC within player encounter radius → emits `ActiveEncounter` to store |
 
 **Constants:**
 
 ```
-NPC_COLLISION_RADIUS    = 0.8  world units
 PLAYER_ENCOUNTER_RADIUS = 1.5  world units
 PLAYER_ARRIVAL_RADIUS   = 0.3  world units
-FROZEN_DURATION_MS      = 4000 ms
-MAX_FROZEN_PAIRS        = 10
 ```
 
 **External action:**
@@ -215,11 +197,8 @@ for each instance:
   else if state > 0.5  → FROZEN
       velocity = 0, position unchanged
 
-  else  → BOIDS
-      boundary steering (push inward if out of world bounds)
-      separation force (Reynolds)
-      normalize to uSpeed
-      integrate position
+  else  → IDLE
+      velocity = 0, position unchanged
 ```
 
 **Vertex shader safety fix:**
@@ -229,9 +208,7 @@ When velocity is zero, `atan(0,0)` is undefined (NaN in WGSL), which collapses t
 
 ```
 uSpeed              (default 0.015)
-uSeparationRadius   (default 0.6)
-uSeparationStrength (default 0.030)
-uWorldSize          (default 25.0)
+uWorldSize          (default 10.0)
 ```
 
 **GPU readback:**
