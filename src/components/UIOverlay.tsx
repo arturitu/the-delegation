@@ -121,7 +121,7 @@ const UIOverlay: React.FC = () => {
               </button>
             </div>
             <p className="text-[13px] text-zinc-400 font-medium leading-snug">
-              Visualizing the professional and social life of specialized AI agents in 3D.
+              A 3D gateway to the professional & social life of specialized AI agents.
             </p>
           </div>
         </div>

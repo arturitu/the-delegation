@@ -27,16 +27,13 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
             className="relative w-full max-w-xl bg-white rounded-[40px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)] p-8 md:p-10 border border-zinc-100"
           >
             <div className="max-w-md mx-auto">
-              <h2 className="text-3xl font-black text-zinc-900 leading-[1.1] mb-6 tracking-tight">
-                What if your AI agents stopped chatting in boxes and started collaborating in a living office?
+              <h2 className="text-3xl font-black text-zinc-900 leading-[1.1] mb-6 tracking-tight text-center">
+                What if you could stop prompting & start delegating to a team of AI agents in a living 3D office?
               </h2>
 
               <div className="space-y-6 text-zinc-500 text-sm leading-relaxed font-medium">
                 <p>
-                  <strong>The Embodied Agency</strong> visualizes the professional and social dynamics of specialized AI agents within a 100m² workspace. By giving roles like Developer and Designer physical embodiment, the project reveals how autonomous intelligence navigates and reasons together in real-time, moving beyond static text interfaces.
-                </p>
-                <p>
-                  Agents manage workflows across four zones—from Reception briefs to Canteen social breaks. Driven by memory and reflection architectures to build rapport, they coordinate autonomously from initial task to final delivery, creating a visible digital ecosystem of emergent collective intelligence.
+                  <strong>The Embodied Agency</strong> is an experimental 3D workspace where AI agents with physical presence collaborate autonomously. By replacing abstract logs and chat interfaces with human-centered metaphors, it makes complex AI processes more transparent and accessible. Users can not only see the final result, but also the collective intelligence behind it.
                 </p>
               </div>
 
