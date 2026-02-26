@@ -60,7 +60,6 @@ interface AgentData {
 **City constants:**
 
 ```
-CITY_NAME          = "Bubbylon"
 TOTAL_COUNT        = 10
 PLAYER_INDEX       = 0
 NPC_START_INDEX    = 1

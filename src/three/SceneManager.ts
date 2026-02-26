@@ -19,8 +19,6 @@ export class SceneManager {
   private behaviorManager: BehaviorManager | null = null;
   private selectedIndex: number | null = null;
 
-  private frameCount = 0;
-  private lastTime = 0;
   private unsubs: (() => void)[] = [];
   private isDisposed = false;
 

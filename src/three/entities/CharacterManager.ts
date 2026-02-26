@@ -21,8 +21,7 @@ import {
   texture,
   sin,
   cos,
-  uv,
-  vec2
+  uv
 } from 'three/tsl';
 import { AgentBehavior, ExpressionKey } from '../../types';
 import { AgentStateBuffer } from '../behavior/AgentStateBuffer';
@@ -30,7 +29,7 @@ import { ExpressionBuffer } from '../behavior/ExpressionBuffer';
 import { AGENTS, PLAYER_INDEX } from '../../data/agents';
 
 export class CharacterManager {
-  private instanceCount = 10;
+  private instanceCount = AGENTS.length;
 
   // Compute Buffers (GPU)
   private posAttribute: THREE.StorageInstancedBufferAttribute | null = null;
@@ -342,13 +341,9 @@ export class CharacterManager {
         }
       }
 
-      // Use the SAME node instance for both main pass and shadow depth pass.
-      // castShadowPositionNode is the r183 WebGPU-specific API that overrides the
-      // position used in the shadow depth pass. Setting it explicitly alongside
-      // positionNode ensures the shadow pass always uses our compute-driven positions.
       const vertexNode = this.createVertexNode();
       material.positionNode = vertexNode;
-      (material as any).castShadowPositionNode = vertexNode;
+      // (material as any).castShadowPositionNode = vertexNode;
 
       const instancedMesh = new THREE.Mesh(instancedGeometry, material);
       instancedMesh.frustumCulled = false;
