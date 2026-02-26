@@ -53,10 +53,8 @@ export enum AnimationName {
 
 /** Stored as a float in the GPU agent buffer (.w component). */
 export enum AgentBehavior {
-  IDLE = 0,    // position locked, velocity zero (previously BOIDS)
-  FROZEN = 1,  // position locked, velocity zero
-  GOTO = 2,    // moves toward waypoint (.x/.z of agent buffer)
-  TALK = 3,    // position locked, playing talk animation
+  IDLE = 0,    // position locked, velocity zero, facing follows waypoint field (if non-zero)
+  GOTO = 1,    // moves toward target waypoint (.x/.z of agent buffer)
 }
 
 export interface ActiveEncounter {

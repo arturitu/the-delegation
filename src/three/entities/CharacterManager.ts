@@ -23,7 +23,7 @@ import {
   cos,
   uv
 } from 'three/tsl';
-import { AgentBehavior, ExpressionKey, AnimationName } from '../../types';
+import { ExpressionKey, AnimationName, AgentBehavior } from '../../types';
 import { AgentStateBuffer } from '../behavior/AgentStateBuffer';
 import { ExpressionBuffer } from '../behavior/ExpressionBuffer';
 import { AGENTS, PLAYER_INDEX } from '../../data/agents';
@@ -56,16 +56,10 @@ export class CharacterManager {
   private meshData: { name: string; geometry: THREE.BufferGeometry; material: THREE.MeshStandardMaterial }[] = [];
   private colors: string[] | null = null;
 
-  // Animation Data (walk = GOTO, idle = IDLE/FROZEN, talk = TALK)
-  private bakedWalkBuffer: THREE.StorageBufferAttribute | null = null;
-  private bakedIdleBuffer: THREE.StorageBufferAttribute | null = null;
-  private bakedTalkBuffer: THREE.StorageBufferAttribute | null = null;
-  private numWalkFrames = 0;
-  private numIdleFrames = 0;
-  private numTalkFrames = 0;
-  private walkDuration = 0;
-  private idleDuration = 0;
-  private talkDuration = 0;
+  // Animation Data
+  private animationsMeta: { [key: string]: { offset: number; numFrames: number; duration: number; index: number } } = {};
+  private bakedAnimationsBuffer: THREE.StorageBufferAttribute | null = null;
+  private metaBuffer: THREE.StorageBufferAttribute | null = null;
   private numBones = 0;
 
   // Uniforms
@@ -90,13 +84,8 @@ export class CharacterManager {
         }
       });
 
-      const animations = gltf.animations;
-      const walkClip = animations.find(a => a.name === AnimationName.WALK);
-      const talkClip = animations.find(a => a.name === AnimationName.TALK);
-      const idleClip = animations.find(a => a.name === AnimationName.IDLE);
-
-      if (skinnedMeshes.length === 0 || !walkClip) {
-        console.warn("CharacterManager: Missing essential animations or meshes.");
+      if (skinnedMeshes.length === 0) {
+        console.warn("CharacterManager: No skinned meshes found.");
         return;
       }
 
@@ -107,34 +96,51 @@ export class CharacterManager {
       }));
 
       const firstMesh = skinnedMeshes[0];
+      this.numBones = firstMesh.skeleton.bones.length;
 
-      const walkData = this.bakeAnimation(firstMesh, walkClip, model);
-      this.bakedWalkBuffer = walkData.buffer;
-      this.numWalkFrames = walkData.numFrames;
-      this.walkDuration = walkData.duration;
-      this.numBones = walkData.numBones;
+      const animations = gltf.animations;
+      const animNames = Object.values(AnimationName);
+      const bakedDataList: Float32Array[] = [];
+      const metaArray = new Float32Array(animNames.length * 4);
+      let currentOffset = 0;
 
-      if (idleClip) {
-        const idleData = this.bakeAnimation(firstMesh, idleClip, model);
-        this.bakedIdleBuffer = idleData.buffer;
-        this.numIdleFrames = idleData.numFrames;
-        this.idleDuration = idleData.duration;
-      } else {
-        this.bakedIdleBuffer = this.bakedWalkBuffer;
-        this.numIdleFrames = this.numWalkFrames;
-        this.idleDuration = this.walkDuration;
+      animNames.forEach((name, i) => {
+        let clip = animations.find(a => a.name === name);
+        // Fallback for essential animations
+        if (!clip) {
+          if (name === AnimationName.IDLE) clip = animations[0];
+          else clip = animations.find(a => a.name === AnimationName.IDLE) || animations[0];
+        }
+
+        const baked = this.bakeAnimation(firstMesh, clip!, model);
+        bakedDataList.push(baked.data);
+
+        this.animationsMeta[name] = {
+          offset: currentOffset,
+          numFrames: baked.numFrames,
+          duration: baked.duration,
+          index: i
+        };
+
+        metaArray[i * 4 + 0] = currentOffset;
+        metaArray[i * 4 + 1] = baked.numFrames;
+        metaArray[i * 4 + 2] = baked.duration;
+        metaArray[i * 4 + 3] = 0;
+
+        currentOffset += baked.numFrames * this.numBones;
+      });
+
+      const totalSize = bakedDataList.reduce((acc, data) => acc + data.length, 0);
+      const combinedData = new Float32Array(totalSize);
+      let seek = 0;
+      for (const data of bakedDataList) {
+        combinedData.set(data, seek);
+        seek += data.length;
       }
 
-      if (talkClip) {
-        const talkData = this.bakeAnimation(firstMesh, talkClip, model);
-        this.bakedTalkBuffer = talkData.buffer;
-        this.numTalkFrames = talkData.numFrames;
-        this.talkDuration = talkData.duration;
-      } else {
-        this.bakedTalkBuffer = this.bakedIdleBuffer;
-        this.numTalkFrames = this.numIdleFrames;
-        this.talkDuration = this.idleDuration;
-      }
+      this.bakedAnimationsBuffer = new THREE.StorageBufferAttribute(combinedData, 16);
+      this.metaBuffer = new THREE.StorageBufferAttribute(metaArray, 4);
+
       this.initInstances();
       this.isLoaded = true;
     } catch (err) {
@@ -236,11 +242,12 @@ export class CharacterManager {
     this.positionStorage = storage(this.posAttribute, 'vec4', this.instanceCount);
     this.velocityStorage = storage(this.velAttribute, 'vec4', this.instanceCount);
 
-    // Agent state buffer — player and NPCs start IDLE (0 = default)
-    // Create BEFORE initComputeNode so the storage node is ready, and set
-    // needsUpdate AFTER the attribute is constructed to force the initial upload.
+    // Physics & state buffer — all start at mode 0 (IDLE)
     this.agentStateBuffer = new AgentStateBuffer(this.instanceCount);
-    this.agentStateBuffer.setState(PLAYER_INDEX, AgentBehavior.IDLE);
+    for (let i = 0; i < this.instanceCount; i++) {
+        this.setPhysicsMode(i, AgentBehavior.IDLE);
+        this.setAnimation(i, AnimationName.IDLE);
+    }
 
     this.expressionBuffer = new ExpressionBuffer(this.instanceCount);
 
@@ -256,44 +263,38 @@ export class CharacterManager {
 
       const posElement = this.positionStorage.element(index);
       const velElement = this.velocityStorage.element(index);
-      const agentData  = agentStorage.element(index);   // vec4: (wpX, 0, wpZ, state)
-      const agentState = agentData.w;                   // float: 0=IDLE 1=FROZEN 2=GOTO 3=TALK
+      const agentData  = agentStorage.element(index);   // vec4: (wpX, anim, wpZ, state)
+      const agentState = agentData.w;                   // float: 0=IDLE 1=GOTO
 
       const pos = posElement.xyz.toVar();
 
-      // ── FROZEN or TALK (state ≈ 1 or 3) ──────────────────────
-      const isFrozen = agentState.greaterThan(float(0.5)).and(agentState.lessThan(float(1.5)));
-      const isTalk = agentState.greaterThan(float(2.5));
-      const shouldStay = isFrozen.or(isTalk);
+      // ── Physical Logic ──────────────────────────────────────
 
-      If(shouldStay.or(agentState.greaterThan(float(1.5))), () => {
-
-        // ── GOTO (state ≈ 2, between 1.5 and 2.5) ─────────────
-        If(agentState.greaterThan(float(1.5)).and(agentState.lessThan(float(2.5))), () => {
-          const waypointXZ = vec3(agentData.x, float(0), agentData.z);
-          const toTarget = waypointXZ.sub(pos);
-          const dist = toTarget.length();
-          If(dist.greaterThan(float(0.2)), () => {
-            const gotoVel = toTarget.normalize().mul(this.uSpeed.mul(3.0));
-            velElement.assign(vec4(gotoVel, 0.0));
-            posElement.assign(vec4(pos.add(gotoVel), 1.0));
-          }).Else(() => {
-            posElement.assign(vec4(pos, 1.0));
-          });
-
+      If(agentState.greaterThan(float(0.5)), () => {
+        // ── GOTO (state == 1) ──────────────────────────────────
+        const waypointXZ = vec3(agentData.x, float(0), agentData.z);
+        const toTarget = waypointXZ.sub(pos);
+        const dist = toTarget.length();
+        If(dist.greaterThan(float(0.2)), () => {
+          const gotoVel = toTarget.normalize().mul(this.uSpeed.mul(3.0));
+          velElement.assign(vec4(gotoVel, 0.0));
+          posElement.assign(vec4(pos.add(gotoVel), 1.0));
         }).Else(() => {
-          // FROZEN or TALK — hold position, use agentData.xz as facing direction if non-zero
-          const facing = vec3(agentData.x, float(0), agentData.z);
-          If(facing.length().greaterThan(float(0.001)), () => {
-            velElement.assign(vec4(facing, 0.0));
-          });
           posElement.assign(vec4(pos, 1.0));
+          // Note: CPU will detect proximity and transition to IDLE
         });
 
       }).Else(() => {
-        // ── IDLE (state ≈ 0) ──────────────────────────────────
-        // Keep current position, no velocity
-        velElement.assign(vec4(0.0, 0.0, 0.0, 0.0));
+        // ── IDLE (0) ──────────────────────────────────────────
+        // Hold position. Use agentData.xz as facing direction if non-zero.
+        const facing = vec3(agentData.x, float(0), agentData.z);
+
+        If(facing.length().greaterThan(float(0.001)), () => {
+          velElement.assign(vec4(facing, 0.0));
+        }).Else(() => {
+          velElement.assign(vec4(0, 0, 0, 0));
+        });
+
         posElement.assign(vec4(pos, 1.0));
       });
 
@@ -363,15 +364,24 @@ export class CharacterManager {
     return Fn(() => {
       const instancePos = this.positionStorage.element(instanceIndex).xyz;
       const rawVel = this.velocityStorage.element(instanceIndex).xyz;
+      const agentState = this.agentStateBuffer!.storageNode.element(instanceIndex);
       const timeOffset = attribute('instanceTimeOffset');
 
-      // When velocity is zero (FROZEN/GOTO-arrived) atan(0,0) = NaN breaks the mesh.
-      // Fall back to facing +Z so the rotation matrix is always valid.
+      // 1. Determine local rotation (facing)
       const isMoving = rawVel.length().greaterThan(float(0.001));
-      const safeVel = vec3(0, 0, 1).toVar();
-      If(isMoving, () => { safeVel.assign(rawVel); });
+      const facing = vec3(0, 0, 1).toVar(); // Default: Forward
 
-      const angle = atan(safeVel.z, safeVel.x).negate().add(float(Math.PI / 2));
+      If(isMoving, () => {
+        facing.assign(rawVel);
+      }).Else(() => {
+        // If IDLE, use waypoint vector as facing if provided
+        const waypoint = vec3(agentState.x, 0, agentState.z);
+        If(waypoint.length().greaterThan(float(0.001)), () => {
+          facing.assign(waypoint);
+        });
+      });
+
+      const angle = atan(facing.z, facing.x).negate().add(float(Math.PI / 2));
       const rotationMat = mat3(
         vec3(cos(angle), float(0), sin(angle).negate()),
         vec3(float(0), float(1), float(0)),
@@ -380,47 +390,38 @@ export class CharacterManager {
 
       const finalPosition = positionLocal.toVar();
 
-      if (this.bakedWalkBuffer && this.bakedIdleBuffer && this.bakedTalkBuffer) {
-        const walkBuffer = storage(this.bakedWalkBuffer, 'mat4', this.numWalkFrames * this.numBones);
-        const idleBuffer = storage(this.bakedIdleBuffer, 'mat4', this.numIdleFrames * this.numBones);
-        const talkBuffer = storage(this.bakedTalkBuffer, 'mat4', this.numTalkFrames * this.numBones);
-        const agentState = this.agentStateBuffer!.storageNode.element(instanceIndex).w;
+      if (this.bakedAnimationsBuffer && this.metaBuffer) {
+        const animBuffer = storage(this.bakedAnimationsBuffer, 'mat4', this.bakedAnimationsBuffer.count);
+        const metaStorage = storage(this.metaBuffer, 'vec4', this.metaBuffer.count);
+
+        const agentData = this.agentStateBuffer!.storageNode.element(instanceIndex);
+        const animIndex = agentData.y.toUint();
+
+        const meta = metaStorage.element(animIndex);
+        const animOffset = uint(meta.x);
+        const numFrames = uint(meta.y);
+        const duration = float(meta.z);
+
+        const animTime = time.add(timeOffset);
+        const t = animTime.div(duration).fract();
+        const currentFrame = t.mul(numFrames.toFloat()).toUint();
+        const safeFrame = currentFrame.min(numFrames.sub(uint(1)));
 
         const skinIndex = attribute('skinIndex');
         const skinWeight = attribute('skinWeight');
         const skinMat = mat4(0).toVar();
 
-        // Animation selection based on AgentBehavior:
-        // 0: IDLE, 1: FROZEN, 2: GOTO, 3: TALK
-        const isIdleOrFrozen = agentState.lessThan(float(1.5));
-        const isTalk = agentState.greaterThan(float(2.5));
-
-        const buildSkinMat = (animBuf: any, numFrames: number, duration: number) => {
-          const animTime = time.add(timeOffset);
-          const t = animTime.div(float(duration)).fract();
-          const currentFrame = t.mul(float(numFrames)).toInt();
-          const safeFrame = currentFrame.min(uint(numFrames - 1));
-          const addInfluence = (boneIdxNode: any, weightNode: any) => {
-            If(weightNode.greaterThan(0), () => {
-              const address = safeFrame.mul(uint(this.numBones)).add(boneIdxNode.toInt());
-              skinMat.addAssign(animBuf.element(address).mul(weightNode));
-            });
-          };
-          addInfluence(skinIndex.x, skinWeight.x);
-          addInfluence(skinIndex.y, skinWeight.y);
-          addInfluence(skinIndex.z, skinWeight.z);
-          addInfluence(skinIndex.w, skinWeight.w);
+        const addInfluence = (boneIdxNode: any, weightNode: any) => {
+          If(weightNode.greaterThan(0), () => {
+            const address = animOffset.add(safeFrame.mul(uint(this.numBones))).add(boneIdxNode.toUint());
+            skinMat.addAssign(animBuffer.element(address).mul(weightNode));
+          });
         };
 
-        If(isIdleOrFrozen, () => {
-          buildSkinMat(idleBuffer, this.numIdleFrames, this.idleDuration);
-        }).Else(() => {
-          If(isTalk, () => {
-            buildSkinMat(talkBuffer, this.numTalkFrames, this.talkDuration);
-          }).Else(() => {
-            buildSkinMat(walkBuffer, this.numWalkFrames, this.walkDuration);
-          });
-        });
+        addInfluence(skinIndex.x, skinWeight.x);
+        addInfluence(skinIndex.y, skinWeight.y);
+        addInfluence(skinIndex.z, skinWeight.z);
+        addInfluence(skinIndex.w, skinWeight.w);
 
         finalPosition.assign(skinMat.mul(vec4(positionLocal, 1.0)).xyz);
       }
@@ -447,9 +448,8 @@ export class CharacterManager {
       }
     }
     return {
-      buffer: new THREE.StorageBufferAttribute(data, 16),
+      data,
       numFrames,
-      numBones,
       duration,
     };
   }
@@ -473,9 +473,32 @@ export class CharacterManager {
     return new THREE.Vector3(this.debugPosArray[i], this.debugPosArray[i + 1], this.debugPosArray[i + 2]);
   }
 
-  public getAgentState(index: number): number {
+  public setPhysicsMode(index: number, mode: AgentBehavior) {
+    if (!this.agentStateBuffer || index < 0 || index >= this.instanceCount) return;
+    this.agentStateBuffer.setState(index, mode);
+  }
+
+  public getAgentState(index: number): AgentBehavior {
+    if (!this.agentStateBuffer || index < 0 || index >= this.instanceCount) return AgentBehavior.IDLE;
+    return this.agentStateBuffer.getState(index) as AgentBehavior;
+  }
+
+  public setAnimation(index: number, name: AnimationName) {
+    if (this.agentStateBuffer && index >= 0 && index < this.instanceCount) {
+      const meta = this.animationsMeta[name];
+      if (meta) {
+        this.agentStateBuffer.setAnimation(index, meta.index);
+      }
+    }
+  }
+
+  public getAnimationIndex(index: number): number {
     if (!this.agentStateBuffer || index < 0 || index >= this.instanceCount) return 0;
-    return this.agentStateBuffer.getState(index);
+    return this.agentStateBuffer.getAnimation(index);
+  }
+
+  public getAnimationMeta(name: AnimationName) {
+    return this.animationsMeta[name];
   }
 
   public setExpression(index: number, name: ExpressionKey) {
@@ -488,20 +511,7 @@ export class CharacterManager {
     if (this.expressionBuffer) {
       this.expressionBuffer.setSpeaking(index, isSpeaking);
     }
-    if (this.agentStateBuffer) {
-      if (isSpeaking) {
-        const currentState = this.agentStateBuffer.getState(index);
-        // Solo cambiamos el estado de animación a TALK si no se está moviendo (GOTO)
-        if (currentState !== AgentBehavior.GOTO) {
-          this.agentStateBuffer.setState(index, AgentBehavior.TALK);
-        }
-      } else {
-        // Al dejar de hablar volvemos a IDLE si estábamos en estado TALK
-        if (this.agentStateBuffer.getState(index) === AgentBehavior.TALK) {
-          this.agentStateBuffer.setState(index, AgentBehavior.IDLE);
-        }
-      }
-    }
+    // Note: External logic should handle TALK/IDLE animations
   }
 
   public setColors(hexColors: string[]) {

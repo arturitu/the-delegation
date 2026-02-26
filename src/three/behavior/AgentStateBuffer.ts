@@ -1,18 +1,16 @@
 import * as THREE from 'three/webgpu';
 import { storage } from 'three/tsl';
-import { AgentBehavior } from '../../types';
 
 /**
- * CPU/GPU buffer that stores per-instance agent state.
+ * CPU/GPU buffer that stores per-instance physics mode and animation state.
  *
  * Each instance maps to one vec4:
- *   .x = waypoint X  (used when state == GOTO)
- *   .y = 0           (reserved)
- *   .z = waypoint Z  (used when state == GOTO)
- *   .w = AgentBehavior  (0 = IDLE, 1 = FROZEN, 2 = GOTO)
+ *   .x = waypoint X  (used when mode == GOTO)
+ *   .y = animation   (animation index to play)
+ *   .z = waypoint Z  (used when mode == GOTO)
+ *   .w = mode        (0 = IDLE, 1 = GOTO)
  *
- * CPU writes states/waypoints, GPU shader reads them.
- * Setting a value marks the attribute `needsUpdate = true` automatically.
+ * CPU writes metadata, GPU shader reads them.
  */
 export class AgentStateBuffer {
   /** Raw Float32Array (vec4 stride). Direct access for performance-sensitive code. */
@@ -30,14 +28,25 @@ export class AgentStateBuffer {
     this.storageNode = storage(this.attribute, 'vec4', count);
   }
 
-  // ── State ────────────────────────────────────────────────────
+  // ── Mode/State ───────────────────────────────────────────────
 
-  public getState(index: number): AgentBehavior {
-    return this.array[index * 4 + 3] as AgentBehavior;
+  public getState(index: number): number {
+    return this.array[index * 4 + 3];
   }
 
-  public setState(index: number, state: AgentBehavior): void {
+  public setState(index: number, state: number): void {
     this.array[index * 4 + 3] = state;
+    this.attribute.needsUpdate = true;
+  }
+
+  // ── Animation ────────────────────────────────────────────────
+
+  public getAnimation(index: number): number {
+    return this.array[index * 4 + 1];
+  }
+
+  public setAnimation(index: number, animIndex: number): void {
+    this.array[index * 4 + 1] = animIndex;
     this.attribute.needsUpdate = true;
   }
 

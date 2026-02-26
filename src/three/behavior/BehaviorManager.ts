@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { AgentBehavior, ActiveEncounter } from '../../types';
+import { AgentBehavior, ActiveEncounter, AnimationName } from '../../types';
 import { AgentStateBuffer } from './AgentStateBuffer';
 import { AgentData, PLAYER_INDEX } from '../../data/agents';
 import { useStore } from '../../store/useStore';
@@ -11,17 +11,33 @@ const PLAYER_ARRIVAL_RADIUS = 0.3;         // world units — GOTO waypoint reac
 export class BehaviorManager {
   private currentEncounterNPC: number | null = null;
   private chatNPC: number | null = null; // NPC player is currently moving to talk to
+  private characterManager: any = null; // Optional reference
 
   constructor(
     private stateBuffer: AgentStateBuffer,
     private agents: AgentData[],
     private onEncounterChange: (encounter: ActiveEncounter | null) => void,
-    private onSpeakingTrigger: (index: number, isSpeaking: boolean) => void,
     private onPlayerArrivedAtNPC: (index: number) => void,
   ) {
-    // Player starts IDLE — user activates it with a floor click (GOTO)
-    stateBuffer.setState(PLAYER_INDEX, AgentBehavior.IDLE);
-    // All NPCs start in IDLE mode (resetAllNPCsToState is called with default 0 values already)
+    // Note: Initial state is set via CharacterManager during its own initialization
+  }
+
+  public setCharacterManager(mgr: any) {
+    this.characterManager = mgr;
+  }
+
+  private setAgentState(index: number, behavior: AgentBehavior) {
+    if (!this.characterManager) return;
+
+    // Map high-level AgentBehavior to physical mode (index) and AnimationName
+    let animation = AnimationName.IDLE;
+
+    if (behavior === AgentBehavior.GOTO) {
+      animation = AnimationName.WALK;
+    }
+
+    this.characterManager.setPhysicsMode(index, behavior);
+    this.characterManager.setAnimation(index, animation);
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -36,7 +52,7 @@ export class BehaviorManager {
       const pdx = wp.x - positions[PLAYER_INDEX * 4];
       const pdz = wp.z - positions[PLAYER_INDEX * 4 + 2];
       if (pdx * pdx + pdz * pdz < PLAYER_ARRIVAL_RADIUS * PLAYER_ARRIVAL_RADIUS) {
-        this.stateBuffer.setState(PLAYER_INDEX, AgentBehavior.IDLE);
+        this.setAgentState(PLAYER_INDEX, AgentBehavior.IDLE);
 
         if (this.chatNPC !== null) {
           const finishedNPC = this.chatNPC;
@@ -98,7 +114,7 @@ export class BehaviorManager {
   public setPlayerWaypoint(x: number, z: number): void {
     this.chatNPC = null; // Cancel any pending chat
     this.stateBuffer.setWaypoint(PLAYER_INDEX, x, z);
-    this.stateBuffer.setState(PLAYER_INDEX, AgentBehavior.GOTO);
+    this.setAgentState(PLAYER_INDEX, AgentBehavior.GOTO);
   }
 
   public startChat(npcIndex: number, positions: Float32Array): void {
@@ -125,19 +141,19 @@ export class BehaviorManager {
     const targetZ = nz + dz * 1.2;
 
     this.stateBuffer.setWaypoint(PLAYER_INDEX, targetX, targetZ);
-    this.stateBuffer.setState(PLAYER_INDEX, AgentBehavior.GOTO);
+    this.setAgentState(PLAYER_INDEX, AgentBehavior.GOTO);
     this.chatNPC = npcIndex;
 
-    // Freeze NPC and set it to face the player's future position
-    this.stateBuffer.setState(npcIndex, AgentBehavior.FROZEN);
+    // Set NPC to IDLE and face the player's approach position
+    this.setAgentState(npcIndex, AgentBehavior.IDLE);
     this.stateBuffer.setWaypoint(npcIndex, dx, dz); // Face the player
   }
 
   public endChat(npcIndex: number | null): void {
     this.chatNPC = null;
     if (npcIndex !== null) {
-      this.stateBuffer.setState(npcIndex, AgentBehavior.IDLE);
+      this.setAgentState(npcIndex, AgentBehavior.IDLE);
     }
-    this.stateBuffer.setState(PLAYER_INDEX, AgentBehavior.IDLE);
+    this.setAgentState(PLAYER_INDEX, AgentBehavior.IDLE);
   }
 }

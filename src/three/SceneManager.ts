@@ -6,7 +6,7 @@ import { InputManager } from './input/InputManager';
 import { BehaviorManager } from './behavior/BehaviorManager';
 import { AGENTS, PLAYER_INDEX } from '../data/agents';
 import { useStore } from '../store/useStore';
-import { AgentBehavior, ChatMessage } from '../types';
+import { AgentBehavior, AnimationName, ChatMessage } from '../types';
 import { geminiService } from '../services/geminiService';
 import * as THREE from 'three/webgpu';
 
@@ -51,7 +51,6 @@ export class SceneManager {
         stateBuffer,
         AGENTS,
         (encounter) => useStore.getState().setActiveEncounter(encounter),
-        (index, isSpeaking) => this.characters.setSpeaking(index, isSpeaking),
         (npcIndex) => {
           // Player arrived at NPC -> Start thinking/talking
           const state = useStore.getState();
@@ -60,6 +59,7 @@ export class SceneManager {
           }
         }
       );
+      this.behaviorManager.setCharacterManager(this.characters);
     }
 
     this.inputManager = new InputManager(
@@ -175,26 +175,62 @@ Keep your responses extremely brief (1-2 short sentences max) and professional, 
         this.stage.updateDimensions(state.worldSize);
       }
 
-      // Handle Speaking Animation trigger
+      // 3. Handle Speaking Animation trigger (General)
       if (state.lastSpeakingTrigger !== prevState.lastSpeakingTrigger && state.lastSpeakingTrigger) {
-        this.characters.setSpeaking(state.lastSpeakingTrigger.index, state.lastSpeakingTrigger.isSpeaking);
+        const { index, isSpeaking } = state.lastSpeakingTrigger;
+        this.characters.setSpeaking(index, isSpeaking);
+
+        // Only update idle animations if physically not walking
+        if (this.characters.getAgentState(index) === AgentBehavior.IDLE) {
+          if (isSpeaking) {
+            this.characters.setAnimation(index, AnimationName.TALK);
+          } else {
+            // Restore context-appropriate animation
+            const isNpcChatting = state.isChatting && index === state.selectedNpcIndex;
+            const isPlayerChatting = state.isChatting && index === PLAYER_INDEX;
+
+            if (isNpcChatting || isPlayerChatting) {
+              this.characters.setAnimation(index, AnimationName.LISTEN);
+            } else {
+              this.characters.setAnimation(index, AnimationName.IDLE);
+            }
+          }
+        }
       }
 
-      // Handle Player Thinking/Speaking during chat
-      if (state.isChatting !== prevState.isChatting || state.isThinking !== prevState.isThinking || state.isTyping !== prevState.isTyping) {
-        if (state.isChatting && state.selectedNpcIndex !== null) {
-          // NPC speaks when thinking (model response)
-          this.characters.setSpeaking(state.selectedNpcIndex, state.isThinking);
+      // 4. Handle Conversation State Changes (Thinking/Typing)
+      const chatRelatedChanged = state.isChatting !== prevState.isChatting ||
+                                 state.isThinking !== prevState.isThinking ||
+                                 state.isTyping !== prevState.isTyping;
 
-          // Player speaks when typing
+      if (chatRelatedChanged) {
+        if (state.isChatting && state.selectedNpcIndex !== null) {
+          const npcIdx = state.selectedNpcIndex;
+
+          // NPC Visuals
+          this.characters.setSpeaking(npcIdx, state.isThinking);
+          if (this.characters.getAgentState(npcIdx) === AgentBehavior.IDLE) {
+            this.characters.setAnimation(npcIdx, state.isThinking ? AnimationName.TALK : AnimationName.LISTEN);
+          }
+
+          // Player Visuals
           this.characters.setSpeaking(PLAYER_INDEX, state.isTyping);
+          if (this.characters.getAgentState(PLAYER_INDEX) === AgentBehavior.IDLE) {
+            this.characters.setAnimation(PLAYER_INDEX, state.isTyping ? AnimationName.TALK : AnimationName.LISTEN);
+          }
         } else if (!state.isChatting && prevState.isChatting) {
-          // Chat ended - clean up whichever NPC was chatting
+          // Chat ended - clear speaking status and restore IDLE
           const prevNpcIndex = prevState.selectedNpcIndex;
           if (prevNpcIndex !== null) {
             this.characters.setSpeaking(prevNpcIndex, false);
+            if (this.characters.getAgentState(prevNpcIndex) === AgentBehavior.IDLE) {
+              this.characters.setAnimation(prevNpcIndex, AnimationName.IDLE);
+            }
           }
           this.characters.setSpeaking(PLAYER_INDEX, false);
+          if (this.characters.getAgentState(PLAYER_INDEX) === AgentBehavior.IDLE) {
+            this.characters.setAnimation(PLAYER_INDEX, AnimationName.IDLE);
+          }
         }
       }
     });
