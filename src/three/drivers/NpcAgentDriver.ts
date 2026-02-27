@@ -57,9 +57,9 @@ export class NpcAgentDriver implements IAgentDriver {
       }
     }
 
-    // 2. Probabilidad media de ir a descansar (sit / sit_idle)
+    // 2. Probabilidad media de ir a descansar (sit_idle)
     if (rand < 0.7) {
-      const pois = this.controller.poiManager.getFreePois('sit');
+      const pois = this.controller.poiManager.getFreePois('sit_idle');
       if (pois.length > 0) {
         const poi = pois[Math.floor(Math.random() * pois.length)];
         this.controller.walkToPoi(this.agentIndex, poi.id);
@@ -68,7 +68,15 @@ export class NpcAgentDriver implements IAgentDriver {
       }
     }
 
-    // 3. Probabilidad de ir a una zona (area) a "merodear"
+    // 3. If the NPC is currently seated (sit_idle / sit_work), never stand up via the
+    //    fallback path — only stand when actively finding a new POI (cases 1 & 2 above).
+    const currentState = this.controller.getState(this.agentIndex);
+    if (currentState === 'sit_idle' || currentState === 'sit_work') {
+      this.behaviorTimer = Math.random() * 15 + 10;
+      return;
+    }
+
+    // 4. Standing: try wandering to an area POI
     if (rand < 0.9) {
       const areaPois = this.controller.poiManager.getFreePoisByPrefix('area_');
       if (areaPois.length > 0) {
@@ -83,7 +91,7 @@ export class NpcAgentDriver implements IAgentDriver {
       }
     }
 
-    // 4. Por defecto, quedarse idle o animaciones cortas
+    // 5. Standing idle fallback — play a short reaction animation
     const expressions: ('look_around' | 'wave' | 'happy')[] = ['look_around', 'wave', 'happy'];
     const randomAnim = expressions[Math.floor(Math.random() * expressions.length)];
     this.controller.play(this.agentIndex, randomAnim);

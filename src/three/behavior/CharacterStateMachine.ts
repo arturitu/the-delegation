@@ -15,7 +15,7 @@ export const STATE_MAP: Record<CharacterStateKey, CharacterStateDef> = {
   walk:        { animation: AnimationName.WALK,                                 loop: true,  interruptible: true },
   talk:        { animation: AnimationName.TALK,        expression: 'neutral',   loop: true,  interruptible: true },
   listen:      { animation: AnimationName.LISTEN,      expression: 'listening', loop: true,  interruptible: true },
-  sit:         { animation: AnimationName.SIT,                                  loop: false, nextState: 'sit_idle', interruptible: false },
+  sit_down:    { animation: AnimationName.SIT_DOWN,                             loop: false, nextState: 'sit_idle', interruptible: false },
   sit_idle:    { animation: AnimationName.SIT_IDLE,    expression: 'idle',      loop: true,  interruptible: true },
   sit_work:    { animation: AnimationName.SIT_WORK,    expression: 'idle',      loop: true,  interruptible: true },
   look_around: { animation: AnimationName.LOOK_AROUND, expression: 'surprised', loop: false, nextState: 'idle',    interruptible: true },

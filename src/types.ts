@@ -31,9 +31,10 @@ export enum AnimationName {
   WALK = 'Walk',
   TALK = 'Talk',
   LISTEN = 'Listen',
-  SIT = 'Sit',
-  SIT_IDLE = 'Sit_idle',
-  SIT_WORK = 'Sit_work',
+  SIT_DOWN = 'Sit',      // one-shot sit-down entry animation
+  SIT_IDLE = 'Sit_idle', // loop: seated idle
+  SIT_WORK = 'Sit_work', // loop: seated working
+
   LOOK_AROUND = 'LookAround',
   HAPPY = 'Happy',
   SAD = 'Sad',
@@ -58,9 +59,9 @@ export type CharacterStateKey =
   | 'walk'
   | 'talk'
   | 'listen'
-  | 'sit'
-  | 'sit_idle'
-  | 'sit_work'
+  | 'sit_down'   // one-shot entry animation; auto-transitions to sit_idle
+  | 'sit_idle'   // looping: seated at rest
+  | 'sit_work'   // looping: seated working
   | 'look_around'
   | 'happy'
   | 'sad'
@@ -84,7 +85,7 @@ export interface CharacterStateDef {
   nextState?: CharacterStateKey;
   /**
    * Whether external callers can interrupt this state with a new one.
-   * Non-interruptible states (e.g. 'sit' entry) must finish before new commands apply.
+   * Non-interruptible states (e.g. 'sit_down' entry) must finish before new commands apply.
    */
   interruptible: boolean;
 }

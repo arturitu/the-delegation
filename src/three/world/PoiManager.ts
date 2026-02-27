@@ -5,7 +5,7 @@ import { CharacterStateKey, PoiDef } from '../../types';
  * Manages Points of Interest (POIs) in the world.
  *
  * A POI is a named location that, when reached by an agent, triggers
- * a specific character state (e.g. 'sit', 'sit_work').
+ * a specific character state (e.g. 'sit_idle', 'sit_work').
  *
  * Procedural POIs are added via addPoi().
  * In the future, loadFromGlb() will extract them from empty objects
@@ -117,7 +117,8 @@ export class PoiManager {
   /**
    * Extract POIs from a loaded GLB scene.
    * Convention: empty objects named "poi-<arrivalState>-<uniqueId>".
-   * Example: "poi-sit-chair_01", "poi-sit_work-desk_02"
+   * The arrivalState is the FINAL resting state, not the entry animation.
+   * Example: "poi-sit_idle-chair_01", "poi-sit_work-desk_02"
    */
   public loadFromGlb(scene: THREE.Object3D): void {
     scene.traverse((child) => {

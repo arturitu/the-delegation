@@ -47,7 +47,7 @@ export class CharacterController implements ICharacterDriver {
   /**
    * Transition a character to the given state.
    * The state machine applies the correct animation + expression automatically.
-   * Non-interruptible states (e.g. 'sit') will queue the new state until ready.
+   * Non-interruptible states (e.g. 'sit_down') will queue the new state until ready.
    */
   public play(index: number, state: CharacterStateKey): void {
     this.stateMachine.transition(index, state, this);
@@ -79,6 +79,10 @@ export class CharacterController implements ICharacterDriver {
 
     if (path.length === 0) return;
 
+    // Ensure the agent ends up at the exact target position,
+    // not at the nearest navmesh polygon boundary.
+    path[path.length - 1] = target.clone();
+
     this.pathAgents[index].setPath(path);
     this.arrivalCallbacks[index] = (i) => {
       this.play(i, arrivalState);
@@ -101,16 +105,29 @@ export class CharacterController implements ICharacterDriver {
     this.poiManager.occupy(poiId, index);
 
     const targetState = poi.arrivalState;
-    // Both 'sit' and 'sit_work' start with the sitting down animation 'sit'
-    const intermediateState = (targetState === 'sit' || targetState === 'sit_work') ? 'sit' : targetState;
+    // POI arrivalState is always the desired FINAL state (sit_idle or sit_work).
+    // Both require the one-shot 'sit_down' entry animation first.
+    const isSitVariant = targetState === 'sit_idle' || targetState === 'sit_work';
 
-    this.moveTo(index, poi.position, intermediateState, (i) => {
-      // Upon arrival, set the orientation from the POI
+    // Navigate to the exact POI position.
+    // We use 'idle' as a throw-away arrivalState and handle everything
+    // explicitly in the callback so orientation is set BEFORE any animation.
+    this.moveTo(index, poi.position, 'idle', (i) => {
+      // 1. Snap orientation to POI facing direction FIRST
       this.characterManager.setOrientation(i, poi.quaternion);
 
-      // If we are at a working desk, queue the work loop after sitting down
-      if (targetState === 'sit_work') {
+      // 2. Drive the correct animation sequence
+      if (isSitVariant) {
+        // Play sit_down once (non-interruptible, nextState → 'sit_idle' by default)
+        this.play(i, 'sit_down');
+
+        // For sit_work: queue the work loop — applied once 'sit_down' finishes,
+        // overriding the default nextState ('sit_idle')
+        if (targetState === 'sit_work') {
           this.play(i, 'sit_work');
+        }
+      } else {
+        this.play(i, targetState);
       }
 
       onArrival?.(i);

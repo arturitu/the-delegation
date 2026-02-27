@@ -294,13 +294,15 @@ export class CharacterManager {
           velElement.assign(vec4(gotoVel, 0.0));
           posElement.assign(vec4(pos.add(gotoVel), 1.0));
         }).Else(() => {
-          posElement.assign(vec4(pos, 1.0));
-          // Note: CPU will detect proximity and transition to IDLE
+          // Snap X,Z to exact waypoint — CPU will transition to IDLE this frame
+          posElement.assign(vec4(agentData.x, pos.y, agentData.z, 1.0));
         });
 
       }).Else(() => {
         // ── IDLE (0) ──────────────────────────────────────────
-        // Hold position. Maintenance of velocity allows keeping rotation.
+        // Zero velocity so the vertex shader uses facingOverride (setFacing/setOrientation)
+        // instead of the stale walk velocity for rotation.
+        velElement.assign(vec4(float(0), float(0), float(0), float(0)));
         posElement.assign(vec4(pos, 1.0));
       });
 
