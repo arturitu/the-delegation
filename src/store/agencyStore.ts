@@ -4,6 +4,7 @@ export type TaskStatus = 'scheduled' | 'on_hold' | 'in_progress' | 'done'
 
 export interface Task {
   id: string
+  title: string
   description: string
   assignedAgentIds: number[]
   status: TaskStatus

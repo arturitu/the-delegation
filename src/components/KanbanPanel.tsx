@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useAgencyStore, type Task, type TaskStatus } from '../store/agencyStore'
 import { AGENTS } from '../data/agents'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 
 const COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: 'scheduled',   label: 'Scheduled'   },
@@ -23,11 +24,30 @@ function renderAgentTag(agentIndex: number) {
   )
 }
 
-function renderTaskCard(task: Task) {
+function TaskCard({ task }: { task: Task }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+
   return (
-    <div key={task.id} className="bg-white rounded-lg border border-black/5 shadow-sm p-3 space-y-2">
-      <p className="text-xs text-zinc-800 leading-snug font-medium">{task.description}</p>
-      <div className="flex flex-wrap gap-1.5">
+    <div key={task.id} className="bg-white rounded-lg border border-black/5 shadow-sm p-3 space-y-2 group">
+      <div
+        className="flex items-start justify-between gap-1 cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <h3 className="text-xs text-zinc-900 leading-snug font-bold flex-1">
+          {task.title || 'Untitled Task'}
+        </h3>
+        <button className="text-zinc-300 group-hover:text-zinc-500 transition-colors">
+          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </button>
+      </div>
+
+      {isExpanded && (
+        <p className="text-[11px] text-zinc-500 leading-relaxed bg-zinc-50/50 p-2 rounded border border-black/5 animate-in fade-in slide-in-from-top-1 duration-200">
+          {task.description}
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-1.5 pt-1">
         {task.assignedAgentIds.map(renderAgentTag)}
       </div>
       {task.status === 'on_hold' && (
@@ -68,7 +88,7 @@ export function KanbanPanel() {
         {COLUMNS.map(({ status, label }) => {
           const colTasks = tasks.filter((t) => t.status === status)
           return (
-            <div key={status} className="flex-1 min-w-36 flex flex-col">
+            <div key={status} className="flex-1 min-w-40 flex flex-col">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400">
                   {label}
@@ -78,7 +98,9 @@ export function KanbanPanel() {
                 </span>
               </div>
               <div className="flex flex-col gap-2 overflow-y-auto">
-                {colTasks.map(renderTaskCard)}
+                {colTasks.map((t) => (
+                  <TaskCard key={t.id} task={t} />
+                ))}
                 {colTasks.length === 0 && (
                   <div className="flex items-start pt-2 justify-center">
                     <span className="text-zinc-200 text-xs">—</span>

@@ -30,7 +30,7 @@ export function ActionLogPanel() {
   const accentColor = filterAgent?.color ?? '#a1a1aa'
 
   return (
-    <div className="w-[320px] h-full bg-white border-r border-zinc-100 shadow-2xl flex flex-col pointer-events-auto overflow-hidden shrink-0">
+    <div className="w-[320px] h-full bg-white border-r border-zinc-100 shadow-2xl flex flex-col pointer-events-auto overflow-hidden shrink-0 relative">
           {/* Color accent bar */}
           <div
             className="absolute top-0 left-0 w-full h-1.5 z-20 transition-colors duration-500"

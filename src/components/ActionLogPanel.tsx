@@ -11,7 +11,7 @@ function formatTime(ts: number): string {
 }
 
 export function ActionLogPanel() {
-  const { setLogOpen, actionLog, logFilterAgentIndex } = useAgencyStore()
+  const { setLogOpen, actionLog, logFilterAgentIndex, phase, setFinalOutputOpen } = useAgencyStore()
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to latest entry whenever a new log entry arrives
@@ -30,7 +30,7 @@ export function ActionLogPanel() {
   const accentColor = filterAgent?.color ?? '#a1a1aa'
 
   return (
-    <div className="w-[320px] h-full bg-white border-r border-zinc-100 shadow-2xl flex flex-col pointer-events-auto overflow-hidden shrink-0">
+    <div className="w-[320px] h-full bg-white border-r border-zinc-100 shadow-2xl flex flex-col pointer-events-auto overflow-hidden shrink-0 relative">
           {/* Color accent bar */}
           <div
             className="absolute top-0 left-0 w-full h-1.5 z-20 transition-colors duration-500"
@@ -74,6 +74,21 @@ export function ActionLogPanel() {
               ✕
             </button>
           </div>
+
+          {/* Project Done Action */}
+          {phase === 'done' && (
+            <div className="px-8 py-4 bg-yellow-50 border-b border-yellow-100 flex flex-col gap-2">
+              <p className="text-[10px] font-black text-yellow-700 uppercase tracking-widest leading-none">
+                Final Delivery Ready
+              </p>
+              <button
+                onClick={() => setFinalOutputOpen(true)}
+                className="w-full py-2.5 bg-yellow-400 text-black rounded-lg text-xs font-black uppercase tracking-widest hover:bg-yellow-500 active:scale-[0.98] transition-all shadow-sm cursor-pointer"
+              >
+                View Project Output
+              </button>
+            </div>
+          )}
 
           {/* Entries */}
           <div className="flex-1 overflow-y-auto px-8 py-6 space-y-5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:display-none">

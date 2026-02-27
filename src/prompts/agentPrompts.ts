@@ -34,8 +34,9 @@ OR when calling a function:
 AVAILABLE FUNCTIONS:
 
 propose_task
-  args: { agentIds: number[], description: string, requiresApproval: boolean }
+  args: { agentIds: number[], title: string, description: string, requiresApproval: boolean }
   use:  Account Manager only. Create a new task for one or more agents.
+  note: title is a very brief 2-4 word summary. description is a short 10-20 word instruction.
 
 execute_work
   args: { taskId: string }
@@ -50,12 +51,9 @@ complete_task
   use:  When your work is done. output is the prompt you crafted (max 500 words).
 
 propose_subtask
-  args: { agentId: number, description: string }
+  args: { agentId: number, title: string, description: string }
   use:  Boardroom only. Assign a specific sub-task to a teammate.
-
-notify_client_project_ready
-  args: { finalPrompt: string }
-  use:  Account Manager only. When ALL tasks are done. Deliver the final assembled prompt.
+  note: title is a very brief 2-4 word summary. description is a short 10-20 word instruction.
 `.trim()
 
 // ─── Team roster visible to all agents ────────────────────────

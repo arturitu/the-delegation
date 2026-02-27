@@ -24,10 +24,15 @@ const UIOverlay: React.FC = () => {
     actionLog,
     isKanbanOpen,
     isLogOpen,
+    isFinalOutputOpen,
     setKanbanOpen,
     setLogOpen,
+    setFinalOutputOpen,
     pendingApprovalTaskId,
+    phase,
   } = useAgencyStore();
+
+  const AM_INDEX = 1; // Account Manager index
 
   const activeTasks = tasks.filter((t) => t.status !== 'done');
   const selectedAgentActiveTask =
@@ -86,6 +91,26 @@ const UIOverlay: React.FC = () => {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Account Manager Approval Bubble (Project Ready) */}
+      {!isFinalOutputOpen && phase === 'done' && (
+        <div
+          className="absolute z-10 pointer-events-auto transition-all duration-75 ease-out cursor-pointer"
+          style={{
+            left: scene?.getNpcScreenPosition(AM_INDEX)?.x ?? 0,
+            top: scene?.getNpcScreenPosition(AM_INDEX)?.y ?? 0,
+            transform: 'translate(-50%, -100%) translateY(-60px)'
+          }}
+          onClick={() => setFinalOutputOpen(true)}
+        >
+          <div className="bg-yellow-400 text-black px-4 py-2 rounded-2xl border-4 border-white shadow-2xl flex items-center gap-2 animate-bounce scale-110">
+            <span className="text-xs font-black uppercase tracking-widest">Project Ready!</span>
+            <div className="w-2 h-2 bg-black rounded-full animate-pulse" />
+          </div>
+          {/* Stem of the speech bubble */}
+          <div className="w-4 h-4 bg-white rotate-45 absolute -bottom-2 left-1/2 -translateX-1/2" />
         </div>
       )}
 

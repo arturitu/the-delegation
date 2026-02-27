@@ -38,12 +38,14 @@ export function useAgencyOrchestrator() {
 
     switch (fn.name) {
       case 'propose_task': {
-        const { agentIds, description, requiresApproval } = fn.args as {
+        const { agentIds, title, description, requiresApproval } = fn.args as {
           agentIds: number[]
+          title: string
           description: string
           requiresApproval: boolean
         }
         const task = store.addTask({
+          title: title || 'New Task',
           description,
           assignedAgentIds: agentIds,
           status: 'scheduled',
@@ -51,7 +53,7 @@ export function useAgencyOrchestrator() {
         })
         store.addLogEntry({
           agentIndex: callerIndex,
-          action: `proposed task "${description}" → assigned to ${agentIds.map(i => AGENTS[i]?.role).join(', ')}`,
+          action: `proposed task "${title || description}" → assigned to ${agentIds.map(i => AGENTS[i]?.role).join(', ')}`,
           taskId: task.id,
         })
         // Transition to working phase on first task creation
@@ -102,11 +104,12 @@ export function useAgencyOrchestrator() {
       }
 
       case 'propose_subtask': {
-        const { agentId, description } = fn.args as { agentId: number; description: string }
+        const { agentId, title, description } = fn.args as { agentId: number; title: string; description: string }
         const parentTask = useAgencyStore.getState().tasks.find(
           (t) => t.assignedAgentIds.includes(callerIndex) && t.status === 'in_progress'
         )
         const sub = store.addTask({
+          title: title || 'Subtask',
           description,
           assignedAgentIds: [agentId],
           status: 'scheduled',
@@ -115,7 +118,7 @@ export function useAgencyOrchestrator() {
         })
         store.addLogEntry({
           agentIndex: callerIndex,
-          action: `proposed subtask for ${AGENTS[agentId]?.role} — "${description}"`,
+          action: `proposed subtask for ${AGENTS[agentId]?.role} — "${title || description}"`,
           taskId: sub.id,
         })
         return true
@@ -125,7 +128,7 @@ export function useAgencyOrchestrator() {
         const { finalPrompt } = fn.args as { finalPrompt: string }
         store.setFinalOutput(finalPrompt)
         store.setPhase('done')
-        store.setFinalOutputOpen(true)
+        // store.setFinalOutputOpen(true) // Don't open automatically
         store.addLogEntry({
           agentIndex: callerIndex,
           action: `delivered final prompt to client`,
