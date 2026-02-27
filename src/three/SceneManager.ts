@@ -395,6 +395,22 @@ export class SceneManager {
     this.engine.render(this.stage.scene, this.stage.camera);
   }
 
+  public getNpcScreenPosition(index: number): { x: number; y: number } | null {
+    if (!this.controller) return null;
+    const npcPos = this.controller.getCPUPosition(index);
+    if (!npcPos) return null;
+
+    const screenPos = npcPos.clone();
+    screenPos.y += BUBBLE_Y_OFFSET;
+    screenPos.project(this.stage.camera);
+
+    const rect = this.container.getBoundingClientRect();
+    return {
+      x: (screenPos.x * 0.5 + 0.5) * rect.width,
+      y: (screenPos.y * -0.5 + 0.5) * rect.height,
+    };
+  }
+
   public dispose() {
     this.isDisposed = true;
     this.unsubs.forEach(u => u());

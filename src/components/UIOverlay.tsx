@@ -60,92 +60,136 @@ const UIOverlay: React.FC = () => {
 
   return (
     <div className="absolute inset-0 pointer-events-none flex flex-col justify-end p-8 z-10 overflow-hidden">
-      {/* Selected Bubble (Always visible when selected) */}
-      {selectedAgent && selectedPosition && (
-        <div
-          className="absolute z-10 pointer-events-none transition-all duration-75 ease-out"
-          style={{
-            left: selectedPosition.x,
-            top: selectedPosition.y,
-            transform: 'translate(-50%, -100%) translateY(-10px)'
-          }}
-        >
-          <div className="bg-zinc-800/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-xl flex items-center gap-2 whitespace-nowrap animate-in fade-in zoom-in-95 duration-200">
+      {/* Selection/Hover/Project Ready Bubble */}
+      {(() => {
+        // Priority 1: Selected Agent
+        if (selectedAgent && selectedPosition) {
+          return (
             <div
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: selectedAgent.color }}
-            />
-            <div className="flex items-center gap-1.5">
-              {selectedAgent.isPlayer ? (
-                <span className="text-[10px] font-black uppercase tracking-widest text-white">{selectedAgent.role} (You)</span>
-              ) : (
-                <>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white">
-                    {selectedAgent.role}
-                  </span>
-                  <span className="text-[10px] font-medium uppercase tracking-widest text-white/40">·</span>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
-                    {selectedAgent.department}
-                  </span>
-                </>
-              )}
+              className="absolute z-10 pointer-events-none transition-all duration-75 ease-out"
+              style={{
+                left: selectedPosition.x,
+                top: selectedPosition.y,
+                transform: 'translate(-50%, -100%) translateY(-10px)'
+              }}
+            >
+              <div className="bg-zinc-800/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-xl flex items-center gap-2 whitespace-nowrap animate-in fade-in zoom-in-95 duration-200">
+                <div
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: selectedAgent.color }}
+                />
+                <div className="flex items-center gap-1.5">
+                  {selectedAgent.isPlayer ? (
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white">{selectedAgent.role} (You)</span>
+                  ) : (
+                    <>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white">
+                        {selectedAgent.role}
+                      </span>
+                      <span className="text-[10px] font-medium uppercase tracking-widest text-white/40">·</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
+                        {selectedAgent.department}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          );
+        }
 
-      {/* Account Manager Approval Bubble (Project Ready) */}
-      {!isFinalOutputOpen && phase === 'done' && (
-        <div
-          className="absolute z-10 pointer-events-auto transition-all duration-75 ease-out cursor-pointer"
-          style={{
-            left: scene?.getNpcScreenPosition(AM_INDEX)?.x ?? 0,
-            top: scene?.getNpcScreenPosition(AM_INDEX)?.y ?? 0,
-            transform: 'translate(-50%, -100%) translateY(-60px)'
-          }}
-          onClick={() => setFinalOutputOpen(true)}
-        >
-          <div className="bg-yellow-400 text-black px-4 py-2 rounded-2xl border-4 border-white shadow-2xl flex items-center gap-2 animate-bounce scale-110">
-            <span className="text-xs font-black uppercase tracking-widest">Project Ready!</span>
-            <div className="w-2 h-2 bg-black rounded-full animate-pulse" />
-          </div>
-          {/* Stem of the speech bubble */}
-          <div className="w-4 h-4 bg-white rotate-45 absolute -bottom-2 left-1/2 -translateX-1/2" />
-        </div>
-      )}
+        // Priority 2: Account Manager "Project Ready" (only if not selected)
+        if (!isFinalOutputOpen && phase === 'done') {
+          const amPos = scene?.getNpcScreenPosition(AM_INDEX);
+          if (amPos) {
+            return (
+              <div
+                className="absolute z-20 pointer-events-auto transition-all duration-75 ease-out cursor-pointer"
+                style={{
+                  left: amPos.x,
+                  top: amPos.y,
+                  transform: 'translate(-50%, -100%) translateY(-20px)'
+                }}
+                onClick={() => setFinalOutputOpen(true)}
+              >
+                <div className="bg-yellow-400 text-black px-3 py-1.5 rounded-full border border-white shadow-xl flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                  <span className="text-[10px] font-black uppercase tracking-widest">Project Ready!</span>
+                  <div className="w-1.5 h-1.5 bg-black rounded-full animate-pulse" />
+                </div>
+              </div>
+            );
+          }
+        }
 
-      {/* Hover Bubble */}
-      {hoveredAgent && hoverPosition && hoveredNpcIndex !== selectedNpcIndex && (
-        <div
-          className="absolute z-10 pointer-events-none transition-all duration-75 ease-out"
-          style={{
-            left: hoverPosition.x,
-            top: hoverPosition.y,
-            transform: 'translate(-50%, -100%) translateY(-10px)'
-          }}
-        >
-          <div className="bg-zinc-800/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-xl flex items-center gap-2 whitespace-nowrap animate-in fade-in zoom-in-95 duration-200">
+        // Priority 3: Hovered Agent (only if not selected and no project ready bubble)
+        if (hoveredAgent && hoverPosition && hoveredNpcIndex !== selectedNpcIndex) {
+          return (
             <div
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: hoveredAgent.color }}
-            />
-            <div className="flex items-center gap-1.5">
-              {hoveredAgent.isPlayer ? (
-                <span className="text-[10px] font-black uppercase tracking-widest text-white">{hoveredAgent.role} (You)</span>
-              ) : (
-                <>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white">
-                    {hoveredAgent.role}
-                  </span>
-                  <span className="text-[10px] font-medium uppercase tracking-widest text-white/40">·</span>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
-                    {hoveredAgent.department}
-                  </span>
-                </>
-              )}
+              className="absolute z-10 pointer-events-none transition-all duration-75 ease-out"
+              style={{
+                left: hoverPosition.x,
+                top: hoverPosition.y,
+                transform: 'translate(-50%, -100%) translateY(-10px)'
+              }}
+            >
+              <div className="bg-zinc-800/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-xl flex items-center gap-2 whitespace-nowrap animate-in fade-in zoom-in-95 duration-200">
+                <div
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: hoveredAgent.color }}
+                />
+                <div className="flex items-center gap-1.5">
+                  {hoveredAgent.isPlayer ? (
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white">{hoveredAgent.role} (You)</span>
+                  ) : (
+                    <>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white">
+                        {hoveredAgent.role}
+                      </span>
+                      <span className="text-[10px] font-medium uppercase tracking-widest text-white/40">·</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
+                        {hoveredAgent.department}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          );
+        }
+
+        return null;
+      })()}
+
+      {/* Task Approval Needed Bubble */}
+      {pendingApprovalTaskId && (
+        (() => {
+          const task = tasks.find(t => t.id === pendingApprovalTaskId);
+          const agentIndex = task?.assignedAgentIds[0];
+          if (agentIndex === undefined) return null;
+          // Don't show approval bubble if that agent is already selected (info is in panel)
+          if (agentIndex === selectedNpcIndex) return null;
+          const pos = scene?.getNpcScreenPosition(agentIndex);
+          if (!pos) return null;
+
+          return (
+            <div
+              className="absolute z-10 pointer-events-auto transition-all duration-75 ease-out cursor-pointer"
+              style={{
+                left: pos.x,
+                top: pos.y,
+                transform: 'translate(-50%, -100%) translateY(-20px)'
+              }}
+              onClick={() => {
+                scene?.startChat(agentIndex);
+              }}
+            >
+              <div className="bg-orange-500 text-white px-3 py-1.5 rounded-full border border-white shadow-xl flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                <span className="text-[10px] font-black uppercase tracking-widest text-white">Approval Needed</span>
+                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+              </div>
+            </div>
+          );
+        })()
       )}
 
       {/* POI Hover Bubble */}
@@ -181,6 +225,63 @@ const UIOverlay: React.FC = () => {
             <p className="text-[13px] text-zinc-400 font-medium leading-snug">
               A 3D gateway to the professional & social life of specialized AI agents.
             </p>
+            {/* Manual Simulation Controls */}
+            <div className="mt-4 flex flex-wrap gap-2 pointer-events-auto items-center">
+              <span className="text-[9px] font-black text-zinc-300 uppercase mr-1">Sim:</span>
+              {phase === 'idle' && (
+                <button
+                  onClick={() => {
+                    const store = useAgencyStore.getState();
+                    store.setPhase('briefing');
+                    store.setClientBrief("Manual Simulation Project");
+                    store.addLogEntry({ agentIndex: 0, action: "started manual project simulation" });
+                  }}
+                  className="px-2 py-1 bg-zinc-100 text-zinc-500 hover:text-blue-600 hover:bg-blue-50 text-[9px] font-bold rounded uppercase cursor-pointer border border-zinc-200 transition-colors"
+                >
+                  Start Briefing
+                </button>
+              )}
+              {phase === 'briefing' && (
+                <button
+                  onClick={() => {
+                    const store = useAgencyStore.getState();
+                    store.addTask({
+                      title: "Manual Research",
+                      description: "Simulated research task",
+                      assignedAgentIds: [2], // Researcher
+                      status: 'scheduled',
+                      requiresClientApproval: false,
+                    });
+                    store.setPhase('working');
+                  }}
+                  className="px-2 py-1 bg-zinc-100 text-zinc-500 hover:text-green-600 hover:bg-green-50 text-[9px] font-bold rounded uppercase cursor-pointer border border-zinc-200 transition-colors"
+                >
+                  Add Res. Task
+                </button>
+              )}
+              {phase === 'working' && (
+                <button
+                  onClick={() => {
+                    const store = useAgencyStore.getState();
+                    store.setPhase('done');
+                    store.setFinalOutput("Simulated final result for testing UI.");
+                  }}
+                  className="px-2 py-1 bg-zinc-100 text-zinc-500 hover:text-purple-600 hover:bg-purple-50 text-[9px] font-bold rounded uppercase cursor-pointer border border-zinc-200 transition-colors"
+                >
+                  Finish Project
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  const store = useAgencyStore.getState();
+                  store.setPhase('idle');
+                  // Keep tasks for now or clear them? Better to just reset phase
+                }}
+                className="px-2 py-1 bg-zinc-100 text-zinc-400 hover:text-red-600 hover:bg-red-50 text-[9px] font-bold rounded uppercase cursor-pointer border border-zinc-200 transition-colors"
+              >
+                Reset
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -283,20 +384,68 @@ const UIOverlay: React.FC = () => {
                   Start Chat
                 </button>
               )}
-              {!selectedAgent.isPlayer && (
-                <button
-                  onClick={() => setLogOpen(true, selectedNpcIndex ?? undefined)}
-                  className="w-full py-3 bg-zinc-100 text-zinc-600 border border-zinc-200 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white hover:text-zinc-900 active:scale-[0.98] transition-all pointer-events-auto cursor-pointer"
-                >
-                  Action Log
-                </button>
-              )}
+
+              <button
+                onClick={() => setLogOpen(true, selectedNpcIndex ?? undefined)}
+                className="w-full py-3 bg-zinc-100 text-zinc-600 border border-zinc-200 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white hover:text-zinc-900 active:scale-[0.98] transition-all pointer-events-auto cursor-pointer"
+              >
+                Action Log
+              </button>
+
+              {/* Debug: Manual Controls */}
+              <div className="mt-2 border-t border-zinc-100 pt-3">
+                <p className="text-[8px] font-black text-zinc-300 uppercase mb-2 tracking-tighter">Debug Simulation</p>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => {
+                      const store = useAgencyStore.getState();
+                      store.addTask({
+                        title: `Work for ${selectedAgent.role}`,
+                        description: "Manually triggered work",
+                        assignedAgentIds: [selectedNpcIndex!],
+                        status: 'scheduled',
+                        requiresClientApproval: false,
+                      });
+                    }}
+                    className="px-2 py-1 bg-zinc-50 text-zinc-500 border border-zinc-200 text-[8px] font-bold rounded uppercase hover:bg-zinc-100 transition-colors"
+                  >
+                    + Task
+                  </button>
+                  {selectedAgentActiveTask && (
+                    <>
+                      <button
+                        onClick={() => {
+                          const store = useAgencyStore.getState();
+                          store.updateTaskStatus(selectedAgentActiveTask.id, 'done');
+                          store.setTaskOutput(selectedAgentActiveTask.id, "Simulated output");
+                          scene?.setNpcWorking(selectedNpcIndex!, false);
+                        }}
+                        className="px-2 py-1 bg-green-50 text-green-600 border border-green-100 text-[8px] font-bold rounded uppercase hover:bg-green-100 transition-colors"
+                      >
+                        Set Done
+                      </button>
+                      <button
+                        onClick={() => {
+                          const store = useAgencyStore.getState();
+                          store.updateTaskStatus(selectedAgentActiveTask.id, 'on_hold');
+                          store.setPendingApproval(selectedAgentActiveTask.id);
+                          scene?.setNpcWorking(selectedNpcIndex!, false);
+                        }}
+                        className="px-2 py-1 bg-orange-50 text-orange-600 border border-orange-100 text-[8px] font-bold rounded uppercase hover:bg-orange-100 transition-colors"
+                      >
+                        Req Approval
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}
       </div>
 
       {/* Help Modal */}
+      {isHelpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
     </div>
   );
 };
