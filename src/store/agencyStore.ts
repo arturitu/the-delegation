@@ -62,8 +62,8 @@ interface AgencyState {
   addLogEntry: (entry: Omit<ActionLogEntry, 'id' | 'timestamp'>) => void
 
   // ── Actions — History ───────────────────────────────────────
-  appendAgentHistory: (agentIndex: number, role: 'user' | 'model', text: string) => void
-  appendBoardroomHistory: (taskId: string, role: 'user' | 'model', text: string) => void
+  appendAgentHistory: (agentIndex: number, role: 'user' | 'model', parts: any[]) => void
+  appendBoardroomHistory: (taskId: string, role: 'user' | 'model', parts: any[]) => void
   clearAllHistories: () => void
 
   // ── Actions — UI ──────────────────────────────────────────────
@@ -126,24 +126,24 @@ export const useAgencyStore = create<AgencyState>((set) => ({
       ],
     })),
 
-  appendAgentHistory: (agentIndex, role, text) =>
+  appendAgentHistory: (agentIndex, role, parts) =>
     set((s) => ({
       agentHistories: {
         ...s.agentHistories,
         [agentIndex]: [
           ...(s.agentHistories[agentIndex] ?? []),
-          { role, parts: [{ text }] },
+          { role, parts },
         ],
       },
     })),
 
-  appendBoardroomHistory: (taskId, role, text) =>
+  appendBoardroomHistory: (taskId, role, parts) =>
     set((s) => ({
       boardroomHistories: {
         ...s.boardroomHistories,
         [taskId]: [
           ...(s.boardroomHistories[taskId] ?? []),
-          { role, parts: [{ text }] },
+          { role, parts },
         ],
       },
     })),

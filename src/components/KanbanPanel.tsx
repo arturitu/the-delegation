@@ -24,7 +24,7 @@ function renderAgentTag(agentIndex: number) {
   )
 }
 
-function TaskCard({ task }: { task: Task }) {
+function TaskCard({ task }: { task: Task; key?: string }) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   return (

@@ -13,47 +13,8 @@ You craft the best possible prompt a human could use to achieve the stated goal.
 const WORKFLOW_RULES = `
 WORKFLOW RULES:
 - You work on ONE task at a time.
-- Always respond with valid JSON matching the schema below. No exceptions.
-- If you have nothing to call, set "fn" to null.
-- Keep "message" concise and professional. No filler text.
-
-RESPONSE SCHEMA:
-{
-  "message": "<your visible message>",
-  "fn": null
-}
-OR when calling a function:
-{
-  "message": "<brief explanation of what you are doing>",
-  "fn": {
-    "name": "<function_name>",
-    "args": { ... }
-  }
-}
-
-AVAILABLE FUNCTIONS:
-
-propose_task
-  args: { agentIds: number[], title: string, description: string, requiresApproval: boolean }
-  use:  Account Manager only. Create a new task for one or more agents.
-  note: title is a very brief 2-4 word summary. description is a short 10-20 word instruction.
-
-execute_work
-  args: { taskId: string }
-  use:  Signal you are starting work on your assigned task (moves it to in_progress).
-
-request_client_approval
-  args: { taskId: string, question: string }
-  use:  When you need client input to continue. Task goes on_hold.
-
-complete_task
-  args: { taskId: string, output: string }
-  use:  When your work is done. output is the prompt you crafted (max 500 words).
-
-propose_subtask
-  args: { agentId: number, title: string, description: string }
-  use:  Boardroom only. Assign a specific sub-task to a teammate.
-  note: title is a very brief 2-4 word summary. description is a short 10-20 word instruction.
+- Keep your messages concise and professional. No filler text.
+- Use the provided tools to manage tasks and communicate progress.
 `.trim()
 
 // ─── Team roster visible to all agents ────────────────────────

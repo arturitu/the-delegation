@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai'
+import { GoogleGenAI, Type, Tool } from '@google/genai'
 import {
   buildSystemPrompt,
   buildDynamicContext,
@@ -9,7 +9,7 @@ import { useAgencyStore } from '../store/agencyStore'
 const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 const MODEL = 'gemini-3-flash-preview'
 
-type HistoryEntry = { role: 'user' | 'model'; parts: { text: string }[] }
+type HistoryEntry = { role: 'user' | 'model'; parts: { text?: string; functionCall?: any; functionResponse?: any }[] }
 
 // ─── Types ────────────────────────────────────────────────────
 export type FunctionCallName =
@@ -30,24 +30,126 @@ export interface AgentResponse {
   functionCall: AgentFunctionCall | null
 }
 
-// ─── Parse structured JSON from model output ──────────────────
-function parseAgentOutput(raw: string): { message: string; fn: AgentFunctionCall | null } {
-  try {
-    // Strip markdown code fences if the model wraps its output
-    const clean = raw
-      .replace(/^```(?:json)?\s*/m, '')
-      .replace(/\s*```$/m, '')
-      .trim()
-    const parsed = JSON.parse(clean)
-    return {
-      message: typeof parsed.message === 'string' ? parsed.message : raw,
-      fn: parsed.fn ?? null,
-    }
-  } catch {
-    // Fallback: treat full text as message, no function call
-    return { message: raw, fn: null }
-  }
-}
+// ─── Tools ────────────────────────────────────────────────────
+const agencyTools: Tool[] = [
+  {
+    functionDeclarations: [
+      {
+        name: 'propose_task',
+        description: 'Account Manager only. Create a new task for one or more agents.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            agentIds: {
+              type: Type.ARRAY,
+              items: { type: Type.INTEGER },
+              description: 'List of agent IDs to assign the task to.',
+            },
+            title: {
+              type: Type.STRING,
+              description: 'A very brief 2-4 word summary of the task.',
+            },
+            description: {
+              type: Type.STRING,
+              description: 'A short 10-20 word instruction for the task.',
+            },
+            requiresApproval: {
+              type: Type.BOOLEAN,
+              description: 'Whether the task requires client approval before starting.',
+            },
+          },
+          required: ['agentIds', 'title', 'description', 'requiresApproval'],
+        },
+      },
+      {
+        name: 'execute_work',
+        description: 'Signal you are starting work on your assigned task (moves it to in_progress).',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            taskId: {
+              type: Type.STRING,
+              description: 'The ID of the task you are starting.',
+            },
+          },
+          required: ['taskId'],
+        },
+      },
+      {
+        name: 'request_client_approval',
+        description: 'When you need client input to continue. Task goes on_hold.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            taskId: {
+              type: Type.STRING,
+              description: 'The ID of the task that needs approval.',
+            },
+            question: {
+              type: Type.STRING,
+              description: 'The question to ask the client.',
+            },
+          },
+          required: ['taskId', 'question'],
+        },
+      },
+      {
+        name: 'complete_task',
+        description: 'When your work is done. output is the prompt you crafted (max 500 words).',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            taskId: {
+              type: Type.STRING,
+              description: 'The ID of the task you completed.',
+            },
+            output: {
+              type: Type.STRING,
+              description: 'The prompt you crafted (max 500 words).',
+            },
+          },
+          required: ['taskId', 'output'],
+        },
+      },
+      {
+        name: 'propose_subtask',
+        description: 'Boardroom only. Assign a specific sub-task to a teammate.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            agentId: {
+              type: Type.INTEGER,
+              description: 'The ID of the agent to assign the sub-task to.',
+            },
+            title: {
+              type: Type.STRING,
+              description: 'A very brief 2-4 word summary of the sub-task.',
+            },
+            description: {
+              type: Type.STRING,
+              description: 'A short 10-20 word instruction for the sub-task.',
+            },
+          },
+          required: ['agentId', 'title', 'description'],
+        },
+      },
+      {
+        name: 'notify_client_project_ready',
+        description: 'When all tasks are completed, assemble the final prompt for the client.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            finalPrompt: {
+              type: Type.STRING,
+              description: 'The final assembled prompt for the client.',
+            },
+          },
+          required: ['finalPrompt'],
+        },
+      },
+    ],
+  },
+]
 
 // ─── Core agent call ──────────────────────────────────────────
 export async function callAgent(params: {
@@ -89,20 +191,30 @@ export async function callAgent(params: {
     config: {
       systemInstruction: buildSystemPrompt(agentIndex, isBoardroom),
       temperature: 0.7,
-      responseMimeType: 'application/json',
+      tools: agencyTools,
     },
   })
 
-  const rawText = response.text ?? ''
-  const { message, fn } = parseAgentOutput(rawText)
+  const functionCall = response.functionCalls?.[0]
+  const fn: AgentFunctionCall | null = functionCall
+    ? {
+        name: functionCall.name as FunctionCallName,
+        args: functionCall.args as Record<string, unknown>,
+      }
+    : null
+
+  const message = response.candidates?.[0]?.content?.parts?.find(p => p.text)?.text || (fn ? `[Called function: ${fn.name}]` : '')
+
+  // We store the interaction as text in the history to avoid strict functionResponse validation
+  const historyText = JSON.stringify({ message, fn })
 
   // Persist turn in manual history
   if (isBoardroom && boardroomTaskId) {
-    store.appendBoardroomHistory(boardroomTaskId, 'user', fullUserMessage)
-    store.appendBoardroomHistory(boardroomTaskId, 'model', rawText)
+    store.appendBoardroomHistory(boardroomTaskId, 'user', [{ text: fullUserMessage }])
+    store.appendBoardroomHistory(boardroomTaskId, 'model', [{ text: historyText }])
   } else {
-    store.appendAgentHistory(agentIndex, 'user', fullUserMessage)
-    store.appendAgentHistory(agentIndex, 'model', rawText)
+    store.appendAgentHistory(agentIndex, 'user', [{ text: fullUserMessage }])
+    store.appendAgentHistory(agentIndex, 'model', [{ text: historyText }])
   }
 
   // Auto-add to the global action log whenever a function is called
