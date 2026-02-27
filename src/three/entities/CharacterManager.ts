@@ -1,6 +1,7 @@
 
 import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import {
   Fn,
   instanceIndex,
@@ -24,6 +25,7 @@ import {
   uv
 } from 'three/tsl';
 import { ExpressionKey, AnimationName, AgentBehavior } from '../../types';
+import { DRACO_LIB_PATH } from '../constants';
 import { AgentStateBuffer } from '../behavior/AgentStateBuffer';
 import { ExpressionBuffer } from '../behavior/ExpressionBuffer';
 import { AGENTS, PLAYER_INDEX } from '../../data/agents';
@@ -71,6 +73,9 @@ export class CharacterManager {
 
   public async load() {
     const loader = new GLTFLoader();
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath(DRACO_LIB_PATH);
+    loader.setDRACOLoader(dracoLoader);
     try {
       const gltf = await loader.loadAsync('/models/character.glb');
       const model = gltf.scene;

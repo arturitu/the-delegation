@@ -8,6 +8,10 @@ export const BUBBLE_Y_OFFSET = 1.3;
 /** World-space sphere radius used for mouse-picking characters. */
 export const PICK_RADIUS = 0.65;
 
+// ── Resource Loading ──────────────────────────────────────────
+/** Path to Draco decoders (hosted in public/vendor/). */
+export const DRACO_LIB_PATH = '/vendor/draco/';
+
 // ── Expression Atlas ─────────────────────────────────────────
 export const ATLAS_COLS = 2;
 export const ATLAS_ROWS = 4;

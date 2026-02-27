@@ -1,6 +1,8 @@
 
 import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { DRACO_LIB_PATH } from '../constants';
 import { NavMeshManager } from '../pathfinding/NavMeshManager';
 import { PoiManager } from './PoiManager';
 
@@ -15,6 +17,9 @@ export class WorldManager {
 
   public async load(): Promise<void> {
     const loader = new GLTFLoader();
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath(DRACO_LIB_PATH);
+    loader.setDRACOLoader(dracoLoader);
     const officeGltf = await loader.loadAsync('/models/office.glb');
     this.office = officeGltf.scene;
     this.scene.add(this.office);

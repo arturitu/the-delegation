@@ -1,6 +1,5 @@
 
 import * as THREE from 'three/webgpu';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Engine } from './core/Engine';
 import { Stage } from './core/Stage';
 import { CharacterManager } from './entities/CharacterManager';
