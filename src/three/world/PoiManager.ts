@@ -9,7 +9,7 @@ import { CharacterStateKey, PoiDef } from '../../types';
  *
  * Procedural POIs are added via addPoi().
  * In the future, loadFromGlb() will extract them from empty objects
- * in a scene GLB (naming convention: pois named "poi_<state>_<id>").
+ * in a scene GLB (naming convention: pois named "poi-<state>-<id>").
  */
 export class PoiManager {
   private pois = new Map<string, PoiDef>();
@@ -51,10 +51,41 @@ export class PoiManager {
     return this.pois.get(id);
   }
 
-  /** Returns all free POIs that trigger the given arrival state. */
+  /** Returns all free POIs for a specific arrival state. */
   public getFreePois(arrivalState: CharacterStateKey): PoiDef[] {
     return Array.from(this.pois.values()).filter(
       p => p.arrivalState === arrivalState && p.occupiedBy === null
+    );
+  }
+
+  /** Returns all free POIs that start with a specific ID prefix (e.g. 'spawn', 'area'). */
+  public getFreePoisByPrefix(prefix: string): PoiDef[] {
+    return Array.from(this.pois.values()).filter(
+      p => p.id.includes(prefix) && p.occupiedBy === null
+    );
+  }
+
+  /** Returns a random free POI matching the given prefix. */
+  public getRandomFreePoi(prefix?: string): PoiDef | null {
+    const candidates = prefix
+      ? this.getFreePoisByPrefix(prefix)
+      : Array.from(this.pois.values()).filter(p => p.occupiedBy === null);
+
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  /** Returns a random point near a POI (for area wandering). */
+  public getRandomPointNearPoi(poiId: string, radius: number): THREE.Vector3 | null {
+    const poi = this.pois.get(poiId);
+    if (!poi) return null;
+
+    const angle = Math.random() * Math.PI * 2;
+    const r = Math.random() * radius;
+    return new THREE.Vector3(
+      poi.position.x + Math.cos(angle) * r,
+      poi.position.y,
+      poi.position.z + Math.sin(angle) * r
     );
   }
 
@@ -85,22 +116,24 @@ export class PoiManager {
 
   /**
    * Extract POIs from a loaded GLB scene.
-   * Convention: empty objects named "poi_<arrivalState>_<uniqueId>".
-   * Example: "poi_sit_chair_01", "poi_sit_work_desk_02"
+   * Convention: empty objects named "poi-<arrivalState>-<uniqueId>".
+   * Example: "poi-sit-chair_01", "poi-sit_work-desk_02"
    */
   public loadFromGlb(scene: THREE.Object3D): void {
     scene.traverse((child) => {
-      const match = child.name.match(/^poi_([a-z_]+)_(.+)$/);
+      const match = child.name.match(/^poi-([a-z_]+)-(.+)$/);
       if (!match) return;
 
       const arrivalState = match[1] as CharacterStateKey;
       const uniqueId = match[2];
-      const id = `${arrivalState}_${uniqueId}`;
+      const id = `${arrivalState}-${uniqueId}`;
 
       const worldPos = new THREE.Vector3();
+      const worldQuat = new THREE.Quaternion();
       child.getWorldPosition(worldPos);
+      child.getWorldQuaternion(worldQuat);
 
-      this.addPoi({ id, position: worldPos, arrivalState, occupiedBy: null });
+      this.addPoi({ id, position: worldPos, quaternion: worldQuat, arrivalState, occupiedBy: null });
     });
   }
 

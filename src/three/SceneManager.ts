@@ -38,6 +38,7 @@ export class SceneManager {
     this.characterManager = new CharacterManager(this.stage.scene);
     this.navMesh = new NavMeshManager();
     this.poiManager = new PoiManager();
+    this.characterManager.setPoiManager(this.poiManager);
     this.worldManager = new WorldManager(this.stage.scene, this.navMesh, this.poiManager);
     this.init();
   }

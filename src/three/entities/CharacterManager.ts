@@ -29,9 +29,11 @@ import { DRACO_LIB_PATH } from '../constants';
 import { AgentStateBuffer } from '../behavior/AgentStateBuffer';
 import { ExpressionBuffer } from '../behavior/ExpressionBuffer';
 import { AGENTS, PLAYER_INDEX } from '../../data/agents';
+import { PoiManager } from '../world/PoiManager';
 
 export class CharacterManager {
   private instanceCount = AGENTS.length;
+  private poiManager: PoiManager | null = null;
 
   // Compute Buffers (GPU)
   private posAttribute: THREE.StorageInstancedBufferAttribute | null = null;
@@ -70,6 +72,10 @@ export class CharacterManager {
   public isLoaded = false;
 
   constructor(private scene: THREE.Scene) {}
+
+  public setPoiManager(poiManager: PoiManager) {
+    this.poiManager = poiManager;
+  }
 
   public async load() {
     const loader = new GLTFLoader();
@@ -205,29 +211,39 @@ export class CharacterManager {
     const tempColor = new THREE.Color();
     const spawnRadius = 8; // Default spawn area
 
+    const spawnPois = this.poiManager?.getFreePoisByPrefix('spawn') || [];
+    let spawnIndex = 0;
+
     for (let i = 0; i < this.instanceCount; i++) {
-      const agent = AGENTS[i] || AGENTS[0];
-      const colorOverride = this.colors && this.colors[i] ? this.colors[i] : agent.color;
+        const agent = AGENTS[i] || AGENTS[0];
+        const colorOverride = this.colors && this.colors[i] ? this.colors[i] : agent.color;
 
-      if (i === PLAYER_INDEX) {
-        // Player spawns slightly offset from center so they're clearly visible
-        posArray[i * 4 + 0] = 0;
-        posArray[i * 4 + 2] = 0;
-        posArray[i * 4 + 3] = 1;
-        tempColor.set(colorOverride);
-      } else {
-        posArray[i * 4 + 0] = (Math.random() - 0.5) * spawnRadius * 2;
-        posArray[i * 4 + 2] = (Math.random() - 0.5) * spawnRadius * 2;
-        posArray[i * 4 + 3] = 1;
-        velArray[i * 4 + 0] = (Math.random() - 0.5) * 0.1;
-        velArray[i * 4 + 2] = (Math.random() - 0.5) * 0.1;
-        tempColor.set(colorOverride);
-      }
+        if (i === PLAYER_INDEX) {
+            // Player spawns slightly offset from center so they're clearly visible
+            posArray[i * 4 + 0] = 0;
+            posArray[i * 4 + 2] = 0;
+            posArray[i * 4 + 3] = 1;
+            tempColor.set(colorOverride);
+        } else {
+            const poi = spawnPois[spawnIndex % spawnPois.length];
+            if (poi) {
+                posArray[i * 4 + 0] = poi.position.x;
+                posArray[i * 4 + 2] = poi.position.z;
+                spawnIndex++;
+            } else {
+                posArray[i * 4 + 0] = (Math.random() - 0.5) * spawnRadius * 2;
+                posArray[i * 4 + 2] = (Math.random() - 0.5) * spawnRadius * 2;
+            }
+            posArray[i * 4 + 3] = 1;
+            velArray[i * 4 + 0] = (Math.random() - 0.5) * 0.1;
+            velArray[i * 4 + 2] = (Math.random() - 0.5) * 0.1;
+            tempColor.set(colorOverride);
+        }
 
-      timeOffsetArray[i] = Math.random() * 10;
-      colorArray[i * 3 + 0] = tempColor.r;
-      colorArray[i * 3 + 1] = tempColor.g;
-      colorArray[i * 3 + 2] = tempColor.b;
+        timeOffsetArray[i] = Math.random() * 10;
+        colorArray[i * 3 + 0] = tempColor.r;
+        colorArray[i * 3 + 1] = tempColor.g;
+        colorArray[i * 3 + 2] = tempColor.b;
     }
 
     this.debugPosArray = new Float32Array(posArray);
@@ -354,15 +370,20 @@ export class CharacterManager {
     return Fn(() => {
       const instancePos = this.positionStorage.element(instanceIndex).xyz;
       const rawVel = this.velocityStorage.element(instanceIndex).xyz;
-      const agentState = this.agentStateBuffer!.storageNode.element(instanceIndex);
+      const agentData = this.agentStateBuffer!.storageNode.element(instanceIndex);
       const timeOffset = attribute('instanceTimeOffset');
 
       // 1. Determine local rotation (facing)
-      const isMoving = rawVel.length().greaterThan(float(0.001));
+      const isMoving = rawVel.length().greaterThan(float(0.01));
+      const facingOverride = vec3(agentData.x, float(0), agentData.z);
+      const hasFacingOverride = facingOverride.length().greaterThan(float(0));
+
       const facing = vec3(0, 0, 1).toVar(); // Default: Forward
 
       If(isMoving, () => {
         facing.assign(rawVel);
+      }).ElseIf(hasFacingOverride, () => {
+        facing.assign(facingOverride);
       });
 
       const angle = atan(facing.z, facing.x).negate().add(float(Math.PI / 2));
@@ -378,7 +399,6 @@ export class CharacterManager {
         const animBuffer = storage(this.bakedAnimationsBuffer, 'mat4', this.bakedAnimationsBuffer.count);
         const metaStorage = storage(this.metaBuffer, 'vec4', this.metaBuffer.count);
 
-        const agentData = this.agentStateBuffer!.storageNode.element(instanceIndex);
         const animIndex = agentData.y.toUint();
 
         const meta = metaStorage.element(animIndex);
@@ -460,6 +480,18 @@ export class CharacterManager {
   public setPhysicsMode(index: number, mode: AgentBehavior) {
     if (!this.agentStateBuffer || index < 0 || index >= this.instanceCount) return;
     this.agentStateBuffer.setState(index, mode);
+  }
+
+  /** Force a specific facing direction when IDLE. */
+  public setFacing(index: number, x: number, z: number) {
+    if (!this.agentStateBuffer || index < 0 || index >= this.instanceCount) return;
+    this.agentStateBuffer.setFacing(index, x, z);
+  }
+
+  /** Force a specific orientation based on a quaternion. */
+  public setOrientation(index: number, quaternion: THREE.Quaternion) {
+    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(quaternion);
+    this.setFacing(index, forward.x, forward.z);
   }
 
   public getAgentState(index: number): AgentBehavior {

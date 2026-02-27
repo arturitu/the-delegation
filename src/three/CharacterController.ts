@@ -31,7 +31,7 @@ export class CharacterController implements ICharacterDriver {
   constructor(
     private readonly characterManager: CharacterManager,
     private readonly navMesh: NavMeshManager,
-    private readonly poiManager: PoiManager,
+    public readonly poiManager: PoiManager,
   ) {
     const count = characterManager.getCount();
     this.stateMachine = new CharacterStateMachine(count);
@@ -91,14 +91,28 @@ export class CharacterController implements ICharacterDriver {
 
   /**
    * Walk a character to a POI by ID.
-   * Occupies the POI immediately; releases it if the agent is interrupted before arriving.
+   * Occupies the POI immediately; releases existing ones first.
    */
   public walkToPoi(index: number, poiId: string, onArrival?: (index: number) => void): void {
     const poi = this.poiManager.getPoi(poiId);
-    if (!poi || poi.occupiedBy !== null) return;
+    if (!poi || (poi.occupiedBy !== null && poi.occupiedBy !== index)) return;
 
+    this.poiManager.releaseAll(index);
     this.poiManager.occupy(poiId, index);
-    this.moveTo(index, poi.position, poi.arrivalState, (i) => {
+
+    const targetState = poi.arrivalState;
+    // Both 'sit' and 'sit_work' start with the sitting down animation 'sit'
+    const intermediateState = (targetState === 'sit' || targetState === 'sit_work') ? 'sit' : targetState;
+
+    this.moveTo(index, poi.position, intermediateState, (i) => {
+      // Upon arrival, set the orientation from the POI
+      this.characterManager.setOrientation(i, poi.quaternion);
+
+      // If we are at a working desk, queue the work loop after sitting down
+      if (targetState === 'sit_work') {
+          this.play(i, 'sit_work');
+      }
+
       onArrival?.(i);
     });
   }

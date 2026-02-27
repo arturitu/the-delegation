@@ -51,9 +51,16 @@ export class AgentStateBuffer {
     this.attribute.needsUpdate = true;
   }
 
-  // ── Waypoint ─────────────────────────────────────────────────
+  // ── Waypoint / Orientation ──────────────────────────────────
 
   public setWaypoint(index: number, x: number, z: number): void {
+    this.array[index * 4 + 0] = x;
+    this.array[index * 4 + 2] = z;
+    this.attribute.needsUpdate = true;
+  }
+
+  /** Used when mode is IDLE to force a specific facing direction. */
+  public setFacing(index: number, x: number, z: number): void {
     this.array[index * 4 + 0] = x;
     this.array[index * 4 + 2] = z;
     this.attribute.needsUpdate = true;

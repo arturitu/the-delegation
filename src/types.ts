@@ -95,6 +95,8 @@ export interface PoiDef {
   id: string;
   /** World-space position to walk toward. */
   position: THREE.Vector3;
+  /** World-space quaternion for orientation. */
+  quaternion: THREE.Quaternion;
   /** State to enter upon arrival. */
   arrivalState: CharacterStateKey;
   /** Agent index currently occupying this POI, or null if free. */
