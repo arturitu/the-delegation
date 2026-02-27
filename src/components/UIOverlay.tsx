@@ -7,6 +7,10 @@ import ChatPanel from './ChatPanel';
 import { AGENTS } from '../data/agents';
 import { HelpCircle } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
+import { useAgencyStore } from '../store/agencyStore';
+import { KanbanModal } from './KanbanModal';
+import { ActionLogModal } from './ActionLogModal';
+import { FinalOutputModal } from './FinalOutputModal';
 
 const UIOverlay: React.FC = () => {
   const {
@@ -20,6 +24,23 @@ const UIOverlay: React.FC = () => {
   } = useStore();
   const scene = useSceneManager();
   const [isHelpOpen, setHelpOpen] = useState(false);
+  const {
+    tasks,
+    actionLog,
+    setKanbanOpen,
+    setLogOpen,
+    pendingApprovalTaskId,
+  } = useAgencyStore();
+
+  const activeTasks = tasks.filter((t) => t.status !== 'done');
+  const selectedAgentActiveTask =
+    selectedNpcIndex != null
+      ? tasks.find(
+          (t) =>
+            t.assignedAgentIds.includes(selectedNpcIndex) &&
+            t.status === 'in_progress'
+        ) ?? null
+      : null;
 
   const selectedAgent = selectedNpcIndex != null ? AGENTS[selectedNpcIndex] ?? null : null;
   const hoveredAgent = hoveredNpcIndex != null ? AGENTS[hoveredNpcIndex] ?? null : null;
@@ -143,10 +164,39 @@ const UIOverlay: React.FC = () => {
             </p>
           </div>
         </div>
-      </div>
+        {/* Header action buttons */}
+        <div className="flex gap-2 pointer-events-auto">
+          <button
+            onClick={() => setKanbanOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm border border-black/10 rounded-xl shadow text-xs font-black uppercase tracking-widest text-zinc-600 hover:bg-white hover:text-zinc-900 transition-all"
+          >
+            Tasks
+            {activeTasks.length > 0 && (
+              <span className="bg-zinc-900 text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center">
+                {activeTasks.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setLogOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm border border-black/10 rounded-xl shadow text-xs font-black uppercase tracking-widest text-zinc-600 hover:bg-white hover:text-zinc-900 transition-all"
+          >
+            Log
+            {actionLog.length > 0 && (
+              <span className="bg-zinc-900 text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center">
+                {actionLog.length}
+              </span>
+            )}
+          </button>
+        </div>      </div>
 
       {/* Help Modal */}
       <HelpModal isOpen={isHelpOpen} onClose={() => setHelpOpen(false)} />
+
+      {/* Agency Modals */}
+      <KanbanModal />
+      <ActionLogModal />
+      <FinalOutputModal />
 
       {/* NPC Info Panel — shown when an NPC is selected */}
       {selectedAgent && (
@@ -177,24 +227,75 @@ const UIOverlay: React.FC = () => {
             ))}
           </div>
 
-          <p className="text-[11px] text-zinc-400 leading-snug mb-5">{selectedAgent.personality}</p>
+          <p className="text-[11px] text-zinc-400 leading-snug mb-4">{selectedAgent.personality}</p>
 
-          {isChatting ? (
-            <button
-              onClick={handleEndChat}
-              style={{ backgroundColor: selectedAgent.color }}
-              className="w-full py-3 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:brightness-90 active:scale-[0.98] transition-all shadow-lg pointer-events-auto"
+          {/* Active task highlight */}
+          {selectedAgentActiveTask && (
+            <div
+              className="rounded-xl p-3 mb-4"
+              style={{
+                backgroundColor: selectedAgent.color + '15',
+                border: `1px solid ${selectedAgent.color}30`,
+              }}
             >
-              End Chat
-            </button>
-          ) : (
-            <button
-              onClick={handleStartChat}
-              className="w-full py-3 bg-zinc-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black active:scale-[0.98] transition-all shadow-lg shadow-zinc-200 pointer-events-auto"
-            >
-              Start Chat
-            </button>
+              <p
+                className="text-[9px] font-black uppercase tracking-widest mb-1"
+                style={{ color: selectedAgent.color }}
+              >
+                Now working on
+              </p>
+              <p className="text-xs text-zinc-700 leading-snug font-medium">
+                {selectedAgentActiveTask.description}
+              </p>
+              <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-wide mt-1">
+                In Progress
+              </p>
+            </div>
           )}
+
+          {/* Approval pending highlight */}
+          {pendingApprovalTaskId &&
+            tasks.find(
+              (t) =>
+                t.id === pendingApprovalTaskId &&
+                t.assignedAgentIds.includes(selectedNpcIndex!)
+            ) && (
+            <div className="rounded-xl p-3 mb-4 bg-amber-50 border border-amber-200">
+              <p className="text-[9px] font-black uppercase tracking-widest text-amber-600 mb-1">
+                Waiting for your approval
+              </p>
+              <p className="text-xs text-amber-700 leading-snug">
+                {tasks.find((t) => t.id === pendingApprovalTaskId)?.description}
+              </p>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            {isChatting ? (
+              <button
+                onClick={handleEndChat}
+                style={{ backgroundColor: selectedAgent.color }}
+                className="w-full py-3 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:brightness-90 active:scale-[0.98] transition-all shadow-lg pointer-events-auto"
+              >
+                End Chat
+              </button>
+            ) : (
+              <button
+                onClick={handleStartChat}
+                className="w-full py-3 bg-zinc-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black active:scale-[0.98] transition-all shadow-lg shadow-zinc-200 pointer-events-auto"
+              >
+                Start Chat
+              </button>
+            )}
+            {!selectedAgent.isPlayer && (
+              <button
+                onClick={() => setLogOpen(true, selectedNpcIndex ?? undefined)}
+                className="w-full py-2.5 bg-zinc-100 text-zinc-500 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 hover:text-zinc-700 active:scale-[0.98] transition-all pointer-events-auto"
+              >
+                Action Log
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

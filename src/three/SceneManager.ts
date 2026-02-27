@@ -29,6 +29,9 @@ export class SceneManager {
   // Track which NPC is selected for camera follow
   private selectedIndex: number | null = null;
 
+  /** Optional handler that intercepts player→NPC messages for the agency system. */
+  private agencyHandler: ((npcIndex: number, text: string) => Promise<string | null>) | null = null;
+
   private unsubs: (() => void)[] = [];
   private isDisposed = false;
 
@@ -206,7 +209,8 @@ export class SceneManager {
     const state = useStore.getState();
     if (state.selectedNpcIndex === null || state.isThinking) return;
 
-    const agent = AGENTS[state.selectedNpcIndex];
+    const npcIndex = state.selectedNpcIndex;
+    const agent = AGENTS[npcIndex];
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMsg: ChatMessage = { role: 'user', text, timestamp };
 
@@ -217,11 +221,19 @@ export class SceneManager {
     }));
 
     try {
-      const responseText = await conversationService.sendMessage(
-        agent,
-        useStore.getState().chatMessages.slice(0, -1),
-        text,
-      );
+      // If an agency handler is registered, delegate to it first.
+      // The handler returns the response string or null to fall through to the default.
+      let responseText: string | null = null;
+      if (this.agencyHandler) {
+        responseText = await this.agencyHandler(npcIndex, text);
+      }
+      if (responseText === null) {
+        responseText = await conversationService.sendMessage(
+          agent,
+          useStore.getState().chatMessages.slice(0, -1),
+          text,
+        );
+      }
       const modelMsg: ChatMessage = {
         role: 'model',
         text: responseText,
@@ -231,6 +243,46 @@ export class SceneManager {
     } catch (err) {
       console.error('[SceneManager] sendMessage error:', err);
       useStore.setState({ isThinking: false });
+    }
+  }
+
+  // ── Agency API ────────────────────────────────────────────────
+
+  /**
+   * Register a handler that intercepts player→NPC messages for the agency system.
+   * Return the response string to override the default conversationService,
+   * or null to fall through to normal chat.
+   */
+  public setAgencyHandler(
+    handler: ((npcIndex: number, text: string) => Promise<string | null>) | null,
+  ): void {
+    this.agencyHandler = handler;
+  }
+
+  /** Play or stop the working animation on an NPC. */
+  public setNpcWorking(index: number, working: boolean): void {
+    if (!this.controller) return;
+    this.controller.play(index, working ? 'sit_work' : 'idle');
+  }
+
+  /** Walk an NPC to the boardroom area POI. */
+  public moveNpcToBoardroom(index: number, onArrival?: () => void): void {
+    if (!this.controller) return;
+    const positions = this.controller.getCPUPositions();
+    const currentPos = positions
+      ? new THREE.Vector3(
+          positions[index * 4],
+          positions[index * 4 + 1],
+          positions[index * 4 + 2],
+        )
+      : undefined;
+    const boardroomPoi = this.poiManager.getPoi('idle-area-boardroom');
+    if (boardroomPoi) {
+      const target = this.poiManager.getRandomPointNearPoi('idle-area-boardroom', 2)
+        ?? boardroomPoi.position;
+      this.controller.moveTo(index, target, 'idle', onArrival ? () => onArrival() : undefined, currentPos);
+    } else if (onArrival) {
+      onArrival();
     }
   }
 
