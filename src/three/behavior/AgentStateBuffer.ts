@@ -5,71 +5,81 @@ import { AgentBehavior } from '../../types';
 /**
  * CPU/GPU buffer that stores per-instance physics mode and animation state.
  *
- * Each instance maps to one vec4:
+ * Each instance maps to two vec4s (8 floats total) per instance.
+ *
+ * Buffer 0 (vec4):
  *   .x = waypoint X  (used when mode == GOTO)
  *   .y = animation   (animation index to play)
  *   .z = waypoint Z  (used when mode == GOTO)
- *   .w = mode        (0 = IDLE, 1 = GOTO)
+ *   .w = mode        (0 = IDLE, 1 = GOTO, 2 = SEATED)
+ *
+ * Buffer 1 (vec4):
+ *   .x = startTime   (global time when animation started)
+ *   .y = loopMode    (1.0 = loop, 0.0 = clamp)
+ *   .z = (unused)
+ *   .w = (unused)
  *
  * CPU writes metadata, GPU shader reads them.
  */
 export class AgentStateBuffer {
-  /** Raw Float32Array (vec4 stride). Direct access for performance-sensitive code. */
+  /** Raw Float32Array (8 floats per instance). */
   public readonly array: Float32Array;
 
-  /** GPU buffer attribute — pass to storage() in the compute shader. */
+  /** GPU buffer attribute. */
   public readonly attribute: THREE.StorageInstancedBufferAttribute;
 
-  /** TSL storage node — bind directly in initComputeNode. */
+  /** TSL storage node. */
   public readonly storageNode: any;
 
   constructor(private readonly count: number) {
-    this.array = new Float32Array(count * 4);
-    this.attribute = new THREE.StorageInstancedBufferAttribute(this.array, 4);
-    this.storageNode = storage(this.attribute, 'vec4', count);
+    this.array = new Float32Array(count * 8);
+    this.attribute = new THREE.StorageInstancedBufferAttribute(this.array, 8);
+    this.storageNode = storage(this.attribute, 'vec4', count * 2);
   }
 
   // ── Mode/State ───────────────────────────────────────────────
 
   public getState(index: number): number {
-    return this.array[index * 4 + 3];
+    return this.array[index * 8 + 3];
   }
 
   public setState(index: number, state: number): void {
-    this.array[index * 4 + 3] = state;
+    this.array[index * 8 + 3] = state;
     this.attribute.needsUpdate = true;
   }
 
   // ── Animation ────────────────────────────────────────────────
 
   public getAnimation(index: number): number {
-    return this.array[index * 4 + 1];
+    return this.array[index * 8 + 1];
   }
 
-  public setAnimation(index: number, animIndex: number): void {
-    this.array[index * 4 + 1] = animIndex;
+  public setAnimation(index: number, animIndex: number, loop: boolean = true, startTime: number = 0): void {
+    this.array[index * 8 + 1] = animIndex;
+    this.array[index * 8 + 4] = startTime;
+    this.array[index * 8 + 5] = loop ? 1.0 : 0.0;
     this.attribute.needsUpdate = true;
   }
 
   // ── Waypoint / Orientation ──────────────────────────────────
 
   public setWaypoint(index: number, x: number, z: number): void {
-    this.array[index * 4 + 0] = x;
-    this.array[index * 4 + 2] = z;
+    this.array[index * 8 + 0] = x;
+    this.array[index * 8 + 2] = z;
     this.attribute.needsUpdate = true;
   }
 
   /** Used when mode is IDLE to force a specific facing direction. */
   public setFacing(index: number, x: number, z: number): void {
-    this.array[index * 4 + 0] = x;
-    this.array[index * 4 + 2] = z;
+    this.array[index * 8 + 0] = x;
+    this.array[index * 8 + 2] = z;
     this.attribute.needsUpdate = true;
   }
 
   public getWaypoint(index: number): { x: number; z: number } {
     return {
-      x: this.array[index * 4 + 0],
-      z: this.array[index * 4 + 2],
+      x: this.array[index * 8 + 0],
+      z: this.array[index * 8 + 2],
     };
   }
 
@@ -78,7 +88,7 @@ export class AgentStateBuffer {
   /** Set all NPC states (skips index 0 = player). */
   public resetAllNPCsToState(state: AgentBehavior, startIndex = 1): void {
     for (let i = startIndex; i < this.count; i++) {
-      this.array[i * 4 + 3] = state;
+      this.array[i * 8 + 3] = state;
     }
     this.attribute.needsUpdate = true;
   }

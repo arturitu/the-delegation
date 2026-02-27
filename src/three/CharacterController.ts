@@ -236,8 +236,8 @@ export class CharacterController implements ICharacterDriver {
     this.characterManager.setPhysicsMode(index, mode);
   }
 
-  public setAnimation(index: number, name: AnimationName): void {
-    this.characterManager.setAnimation(index, name);
+  public setAnimation(index: number, name: AnimationName, loop: boolean = true): void {
+    this.characterManager.setAnimation(index, name, loop);
   }
 
   public setExpression(index: number, key: ExpressionKey): void {

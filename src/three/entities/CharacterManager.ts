@@ -38,7 +38,6 @@ export class CharacterManager {
   // Compute Buffers (GPU)
   private posAttribute: THREE.StorageInstancedBufferAttribute | null = null;
   private velAttribute: THREE.StorageInstancedBufferAttribute | null = null;
-  private timeOffsetAttribute: THREE.InstancedBufferAttribute | null = null;
   private colorAttribute: THREE.InstancedBufferAttribute | null = null;
   private positionStorage: any;
   private velocityStorage: any;
@@ -51,6 +50,9 @@ export class CharacterManager {
 
   // CPU-side mirror of GPU positions (updated via GPU readback each frame)
   private debugPosArray: Float32Array | null = null;
+
+  // Track global time for animation resets
+  private currentTime = 0;
 
   // Logic Nodes
   private computeNode: any;
@@ -183,6 +185,8 @@ export class CharacterManager {
   }
 
   public update(delta: number, renderer: any) {
+    this.currentTime += delta;
+
     if (this.expressionBuffer) {
       this.expressionBuffer.update(delta);
     }
@@ -205,7 +209,6 @@ export class CharacterManager {
 
     const posArray = new Float32Array(this.instanceCount * 4);
     const velArray = new Float32Array(this.instanceCount * 4);
-    const timeOffsetArray = new Float32Array(this.instanceCount);
     const colorArray = new Float32Array(this.instanceCount * 3);
 
     const tempColor = new THREE.Color();
@@ -245,7 +248,6 @@ export class CharacterManager {
             tempColor.set(colorOverride);
         }
 
-        timeOffsetArray[i] = Math.random() * 10;
         colorArray[i * 3 + 0] = tempColor.r;
         colorArray[i * 3 + 1] = tempColor.g;
         colorArray[i * 3 + 2] = tempColor.b;
@@ -255,7 +257,6 @@ export class CharacterManager {
 
     this.posAttribute = new THREE.StorageInstancedBufferAttribute(posArray, 4);
     this.velAttribute = new THREE.StorageInstancedBufferAttribute(velArray, 4);
-    this.timeOffsetAttribute = new THREE.InstancedBufferAttribute(timeOffsetArray, 1);
     this.colorAttribute = new THREE.InstancedBufferAttribute(colorArray, 3);
 
     this.positionStorage = storage(this.posAttribute, 'vec4', this.instanceCount);
@@ -265,7 +266,12 @@ export class CharacterManager {
     this.agentStateBuffer = new AgentStateBuffer(this.instanceCount);
     for (let i = 0; i < this.instanceCount; i++) {
         this.setPhysicsMode(i, AgentBehavior.IDLE);
-        this.setAnimation(i, AnimationName.IDLE);
+
+        // Initial animation: start with a random negative time so they are out of sync
+        const meta = this.animationsMeta[AnimationName.IDLE];
+        if (meta) {
+            this.agentStateBuffer.setAnimation(i, meta.index, true, -Math.random() * 10);
+        }
 
         // APPLY POI ORIENTATION
         const poi = agentsBuffer[i];
@@ -288,8 +294,8 @@ export class CharacterManager {
 
       const posElement = this.positionStorage.element(index);
       const velElement = this.velocityStorage.element(index);
-      const agentData  = agentStorage.element(index);   // vec4: (wpX, anim, wpZ, state)
-      const agentState = agentData.w;                   // float: 0=IDLE 1=GOTO 2=SEATED
+      const agentData  = agentStorage.element(index.mul(2));   // Buffer 0: (wpX, anim, wpZ, state)
+      const agentState = agentData.w;                         // float: 0=IDLE 1=GOTO 2=SEATED
 
       const pos = posElement.xyz.toVar();
 
@@ -330,7 +336,6 @@ export class CharacterManager {
       instancedGeometry.instanceCount = this.instanceCount;
 
       // Solo dejamos el atributo que NO se calcula en el Compute Shader
-      if (this.timeOffsetAttribute) instancedGeometry.setAttribute('instanceTimeOffset', this.timeOffsetAttribute);
       if (this.colorAttribute) instancedGeometry.setAttribute('instanceColor', this.colorAttribute);
 
       const material = new THREE.MeshStandardNodeMaterial();
@@ -386,8 +391,8 @@ export class CharacterManager {
     return Fn(() => {
       const instancePos = this.positionStorage.element(instanceIndex).xyz;
       const rawVel = this.velocityStorage.element(instanceIndex).xyz;
-      const agentData = this.agentStateBuffer!.storageNode.element(instanceIndex);
-      const timeOffset = attribute('instanceTimeOffset');
+      const agentData = this.agentStateBuffer!.storageNode.element(instanceIndex.mul(2));
+      const animParams = this.agentStateBuffer!.storageNode.element(instanceIndex.mul(2).add(1));
 
       // 1. Determine local rotation (facing)
       const isMoving = rawVel.length().greaterThan(float(0.01));
@@ -422,8 +427,12 @@ export class CharacterManager {
         const numFrames = uint(meta.y);
         const duration = float(meta.z);
 
-        const animTime = time.add(timeOffset);
-        const t = animTime.div(duration).fract();
+        const startTime = animParams.x;
+        const loopMode = animParams.y;
+
+        const animTime = time.sub(startTime).max(0);
+        const t = loopMode.greaterThan(0.5) ? animTime.div(duration).fract() : animTime.div(duration).clamp(0, 1);
+
         const currentFrame = t.mul(numFrames.toFloat()).toUint();
         const safeFrame = currentFrame.min(numFrames.sub(uint(1)));
 
@@ -531,11 +540,11 @@ export class CharacterManager {
     return this.agentStateBuffer.getState(index) as AgentBehavior;
   }
 
-  public setAnimation(index: number, name: AnimationName) {
+  public setAnimation(index: number, name: AnimationName, loop: boolean = true) {
     if (this.agentStateBuffer && index >= 0 && index < this.instanceCount) {
       const meta = this.animationsMeta[name];
       if (meta) {
-        this.agentStateBuffer.setAnimation(index, meta.index);
+        this.agentStateBuffer.setAnimation(index, meta.index, loop, this.currentTime);
       }
     }
   }

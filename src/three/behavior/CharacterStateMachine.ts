@@ -103,7 +103,7 @@ export class CharacterStateMachine {
     const prev = this.currentState[index];
     this.currentState[index] = key;
 
-    driver.setAnimation(index, def.animation);
+    driver.setAnimation(index, def.animation, def.loop);
 
     if (def.expression !== undefined) {
       driver.setExpression(index, def.expression);

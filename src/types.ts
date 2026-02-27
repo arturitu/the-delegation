@@ -113,7 +113,7 @@ export interface PoiDef {
  */
 export interface ICharacterDriver {
   setPhysicsMode(index: number, mode: AgentBehavior): void;
-  setAnimation(index: number, name: AnimationName): void;
+  setAnimation(index: number, name: AnimationName, loop?: boolean): void;
   setExpression(index: number, key: ExpressionKey): void;
   setSpeaking(index: number, isSpeaking: boolean): void;
   getAgentState(index: number): AgentBehavior;

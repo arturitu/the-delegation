@@ -32,7 +32,7 @@ export class WorldManager {
 
         if (name.includes('navmesh')) {
           this.navMesh.loadFromGeometry(mesh.geometry);
-        //   mesh.visible = false; // Hide the navmesh geometry itself
+          mesh.visible = false;
         } else {
           mesh.receiveShadow = true;
           mesh.castShadow = true;
