@@ -187,77 +187,50 @@ const UIOverlay: React.FC = () => {
 
       {/* NPC Info Panel — shown when an NPC is selected */}
       {selectedAgent && (
-        <div className="absolute bottom-6 left-8 w-72 bg-white/85 backdrop-blur-2xl rounded-2xl border border-black/5 shadow-2xl p-5 pointer-events-auto animate-in fade-in slide-in-from-left-4 duration-300 z-30 overflow-hidden">
+        <div className="absolute bottom-6 left-8 w-72 bg-white/95 backdrop-blur-2xl rounded-2xl border border-black/10 shadow-2xl p-6 pointer-events-auto animate-in fade-in slide-in-from-left-4 duration-300 z-30 overflow-hidden">
           {/* Color accent bar */}
           <div
-            className="absolute top-0 left-0 w-full h-1"
+            className="absolute top-0 left-0 w-full h-1.5"
             style={{ backgroundColor: selectedAgent.color }}
           />
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-0.5">
-                {selectedAgent.department}
+
+          <div className="mb-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-0.5">
+              {selectedAgent.department}
+            </p>
+            <h2 className="text-xl font-black text-zinc-900 leading-tight">{selectedAgent.role}</h2>
+          </div>
+
+          <div className="h-px bg-zinc-100 w-full mb-4" />
+
+          {/* Active task highlight - Rediseñado para dar foco a la tarea */}
+          {selectedAgentActiveTask ? (
+            <div className="mb-6">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2 flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: selectedAgent.color }}></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: selectedAgent.color }}></span>
+                </span>
+                Doing Now
               </p>
-              <h2 className="text-xl font-black text-zinc-900 leading-tight">{selectedAgent.role}</h2>
+              <p className="text-sm text-zinc-800 leading-snug font-bold">
+                "{selectedAgentActiveTask.description}"
+              </p>
             </div>
-          </div>
-
-          <p className="text-xs text-zinc-600 leading-relaxed mb-3 italic">
-            "{selectedAgent.mission}"
-          </p>
-
-          <div className="flex flex-wrap gap-1 mb-3">
-            {selectedAgent.expertise.map((tag) => (
-              <span key={tag} className="text-[10px] font-bold bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full">
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          <p className="text-[11px] text-zinc-400 leading-snug mb-4">{selectedAgent.personality}</p>
-
-          {/* Active task highlight */}
-          {selectedAgentActiveTask && (
-            <div
-              className="rounded-xl p-3 mb-4"
-              style={{
-                backgroundColor: selectedAgent.color + '15',
-                border: `1px solid ${selectedAgent.color}30`,
-              }}
-            >
-              <p
-                className="text-[9px] font-black uppercase tracking-widest mb-1"
-                style={{ color: selectedAgent.color }}
-              >
-                Now working on
+          ) : (
+            <div className="mb-6">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2">
+                Status
               </p>
-              <p className="text-xs text-zinc-700 leading-snug font-medium">
-                {selectedAgentActiveTask.description}
-              </p>
-              <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-wide mt-1">
-                In Progress
+              <p className="text-sm text-zinc-400 leading-snug italic font-medium">
+                Waiting for next task...
               </p>
             </div>
           )}
 
-          {/* Approval pending highlight */}
-          {pendingApprovalTaskId &&
-            tasks.find(
-              (t) =>
-                t.id === pendingApprovalTaskId &&
-                t.assignedAgentIds.includes(selectedNpcIndex!)
-            ) && (
-            <div className="rounded-xl p-3 mb-4 bg-amber-50 border border-amber-200">
-              <p className="text-[9px] font-black uppercase tracking-widest text-amber-600 mb-1">
-                Waiting for your approval
-              </p>
-              <p className="text-xs text-amber-700 leading-snug">
-                {tasks.find((t) => t.id === pendingApprovalTaskId)?.description}
-              </p>
-            </div>
-          )}
+          <div className="h-px bg-zinc-100 w-full mb-6" />
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2.5">
             {isChatting ? (
               <button
                 onClick={handleEndChat}
@@ -277,7 +250,7 @@ const UIOverlay: React.FC = () => {
             {!selectedAgent.isPlayer && (
               <button
                 onClick={() => setLogOpen(true, selectedNpcIndex ?? undefined)}
-                className="w-full py-2.5 bg-zinc-100 text-zinc-500 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 hover:text-zinc-700 active:scale-[0.98] transition-all pointer-events-auto"
+                className="w-full py-3 bg-zinc-100 text-zinc-600 border border-zinc-200 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white hover:text-zinc-900 active:scale-[0.98] transition-all pointer-events-auto"
               >
                 Action Log
               </button>
