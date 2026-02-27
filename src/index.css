@@ -11,44 +11,10 @@ body,
 #root {
   width: 100%;
   height: 100%;
-}
-
-body {
   margin: 0;
-  background: #ffffff;
 }
 
 /* Tailwind config: font-sans usa Inter */
 .font-sans {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-}
-
-/* Títulos: Inter 900 */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  font-weight: 900;
-}
-
-/* Textos normales: Inter 400/600 */
-p,
-span,
-li,
-a,
-div,
-input,
-textarea,
-label {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  font-weight: 400;
-}
-
-strong,
-b {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  font-weight: 600;
 }
