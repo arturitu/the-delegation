@@ -49,29 +49,45 @@ export class NpcAgentDriver implements IAgentDriver {
     }
 
     // Only decide new actions if we are currently resting in a stable state
-    if (currentState === 'idle' || currentState === 'sit_idle' || currentState === 'sit_work' || currentState === 'look_around') {
+    if (currentState === 'idle' || currentState === 'sit_idle' || currentState === 'look_around') {
       this.behaviorTimer -= delta;
 
       if (this.behaviorTimer <= 0) {
-        this._decideNextAction(positions);
+        this._decideNextAction(positions, currentState);
       }
     }
   }
 
-  private _decideNextAction(positions: Float32Array): void {
+  private _decideNextAction(positions: Float32Array, currentState: string): void {
     const rand = Math.random();
+    const isSeated = currentState === 'sit_idle';
 
-    // Use current position from the synced buffer to avoid "snap back" to stale positions
+    // 1. Behavior when SEATED
+    if (isSeated) {
+      // 10% chance to just stay seated and play an expression
+      if (rand < 0.1) {
+        const expressions: ('sit_idle')[] = ['sit_idle'];
+        const randomAnim = expressions[Math.floor(Math.random() * expressions.length)];
+        this.controller.play(this.agentIndex, randomAnim);
+        this.behaviorTimer = Math.random() * 15 + 15;
+        return;
+      }
+
+      // 90% chance to stand up: fall through to movement logic below,
+      // but only to move/wander, not to sit again immediately.
+    }
+
+    // Capture current position
     const currentPos = new THREE.Vector3(
       positions[this.agentIndex * 4],
       positions[this.agentIndex * 4 + 1],
       positions[this.agentIndex * 4 + 2]
     );
 
-    // When not busy with an agency task, NPCs follow a relaxed autonomous routine:
+    // 2. Behavior when STANDING (or if decided to get up)
 
-    // 1. Decent chance to go "sit_idle" or "sit_work" (just hanging at desk/lounge)
-    if (rand < 0.4) {
+    // A. Chance to go sit (only if NOT already seated or if we explicitly want a new POI)
+    if (!isSeated && rand < 0.4) {
       const pois = this.controller.poiManager.getFreePois('sit_idle', this.agentIndex);
       if (pois.length > 0) {
         const poi = pois[Math.floor(Math.random() * pois.length)];
@@ -81,7 +97,7 @@ export class NpcAgentDriver implements IAgentDriver {
       }
     }
 
-    // 2. Chance to wander to common areas
+    // B. Chance to wander to common areas (both standing and those getting up)
     if (rand < 0.7) {
       const areaPois = this.controller.poiManager.getFreePoisByPrefix('area-', this.agentIndex);
       if (areaPois.length > 0) {
@@ -90,18 +106,23 @@ export class NpcAgentDriver implements IAgentDriver {
         if (target) {
           if (this.controller.moveTo(this.agentIndex, target, 'look_around', undefined, currentPos)) {
             this.controller.poiManager.releaseAll(this.agentIndex);
-            this.behaviorTimer = Math.random() * 5 + 5;
+            this.behaviorTimer = Math.random() * 5 + 10;
             return;
           }
         }
       }
     }
 
-    // 3. Fallback: play a short reaction animation
-    const expressions: ('look_around' | 'wave' | 'happy')[] = ['look_around', 'wave', 'happy'];
-    const randomAnim = expressions[Math.floor(Math.random() * expressions.length)];
-    this.controller.play(this.agentIndex, randomAnim);
-    this.behaviorTimer = Math.random() * 5 + 5;
+    // C. Fallback: play a short reaction animation (only if standing)
+    if (!isSeated) {
+      const expressions: ('look_around' | 'wave' | 'happy')[] = ['look_around', 'wave', 'happy'];
+      const randomAnim = expressions[Math.floor(Math.random() * expressions.length)];
+      this.controller.play(this.agentIndex, randomAnim);
+      this.behaviorTimer = Math.random() * 5 + 5;
+    } else {
+      // If we were seated and decided to get up (10%) but found no place to go, stay seated.
+      this.behaviorTimer = 5;
+    }
   }
 
   public dispose(): void {}

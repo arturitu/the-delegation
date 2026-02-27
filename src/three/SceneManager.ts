@@ -398,7 +398,6 @@ export class SceneManager {
   public dispose() {
     this.isDisposed = true;
     this.unsubs.forEach(u => u());
-    window.removeEventListener('resize', this.onResizeHandler);
     this.driverManager?.dispose();
     this.engine.dispose();
     this.stage.controls?.dispose();

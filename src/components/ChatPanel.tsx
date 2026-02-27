@@ -212,7 +212,7 @@ const ChatPanel: React.FC = () => {
             onClick={handleSend}
             disabled={!input.trim() || isThinking}
             style={{ backgroundColor: !input.trim() || isThinking ? undefined : agent.color }}
-            className={`h-[56px] w-[56px] shrink-0 rounded-2xl flex items-center justify-center font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${
+            className={`h-14 w-14 shrink-0 rounded-2xl flex items-center justify-center font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${
               !input.trim() || isThinking
               ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
               : 'text-white shadow-lg hover:brightness-90'
