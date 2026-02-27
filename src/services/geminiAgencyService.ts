@@ -27,7 +27,7 @@ export interface AgentFunctionCall {
 
 export interface AgentResponse {
   text: string
-  functionCall: AgentFunctionCall | null
+  functionCalls: AgentFunctionCall[]
 }
 
 // ─── Tools ────────────────────────────────────────────────────
@@ -195,18 +195,15 @@ export async function callAgent(params: {
     },
   })
 
-  const functionCall = response.functionCalls?.[0]
-  const fn: AgentFunctionCall | null = functionCall
-    ? {
-        name: functionCall.name as FunctionCallName,
-        args: functionCall.args as Record<string, unknown>,
-      }
-    : null
+  const functionCalls = response.functionCalls?.map(call => ({
+    name: call.name as FunctionCallName,
+    args: call.args as Record<string, unknown>,
+  })) || []
 
-  const message = response.candidates?.[0]?.content?.parts?.find(p => p.text)?.text || (fn ? `[Called function: ${fn.name}]` : '')
+  const message = response.candidates?.[0]?.content?.parts?.find(p => p.text)?.text || ''
 
   // We store the interaction as text in the history to avoid strict functionResponse validation
-  const historyText = JSON.stringify({ message, fn })
+  const historyText = JSON.stringify({ message, functionCalls })
 
   // Persist turn in manual history
   if (isBoardroom && boardroomTaskId) {
@@ -218,7 +215,9 @@ export async function callAgent(params: {
   }
 
   // Auto-add to the global action log whenever a function is called
-  if (fn) {
+  // (We remove this from here because useAgencyOrchestrator already logs these actions)
+  /*
+  for (const fn of functionCalls) {
     const taskId =
       typeof fn.args.taskId === 'string' ? fn.args.taskId : undefined
     store.addLogEntry({
@@ -227,8 +226,9 @@ export async function callAgent(params: {
       taskId,
     })
   }
+  */
 
-  return { text: message, functionCall: fn }
+  return { text: message, functionCalls }
 }
 
 // ─── Convenience wrappers ─────────────────────────────────────

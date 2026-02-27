@@ -264,7 +264,16 @@ const UIOverlay: React.FC = () => {
                   onClick={() => {
                     const store = useAgencyStore.getState();
                     store.setPhase('done');
-                    store.setFinalOutput("Simulated final result for testing UI.");
+
+                    // If there's already a final output, keep it. Otherwise, generate a summary of current tasks.
+                    if (!store.finalOutput) {
+                      const outputs = store.tasks
+                        .filter((t) => t.output)
+                        .map((t) => `[${t.description}]\n${t.output}`)
+                        .join('\n\n---\n\n');
+
+                      store.setFinalOutput(outputs || "Simulated final result for testing UI.");
+                    }
                   }}
                   className="px-2 py-1 bg-zinc-100 text-zinc-500 hover:text-purple-600 hover:bg-purple-50 text-[9px] font-bold rounded uppercase cursor-pointer border border-zinc-200 transition-colors"
                 >

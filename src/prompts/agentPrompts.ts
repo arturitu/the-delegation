@@ -15,6 +15,7 @@ WORKFLOW RULES:
 - You work on ONE task at a time.
 - Keep your messages concise and professional. No filler text.
 - Use the provided tools to manage tasks and communicate progress.
+- You can call multiple tools at once if needed (e.g., propose multiple tasks).
 `.trim()
 
 // ─── Team roster visible to all agents ────────────────────────

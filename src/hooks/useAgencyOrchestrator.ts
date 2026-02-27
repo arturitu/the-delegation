@@ -99,7 +99,11 @@ export function useAgencyOrchestrator() {
         })
         sceneRef.current?.setNpcWorking(callerIndex, false)
         runningAgents.current.delete(callerIndex)
-        checkAllTasksDone()
+
+        // Use a small timeout to allow state to settle before checking if all tasks are done
+        setTimeout(() => {
+          checkAllTasksDone()
+        }, 100)
         return true
       }
 
@@ -142,8 +146,20 @@ export function useAgencyOrchestrator() {
   const checkAllTasksDone = async () => {
     const store = useAgencyStore.getState()
     if (store.phase !== 'working') return
+
+    // Check if there are any tasks at all
+    if (store.tasks.length === 0) return
+
+    // Check if ALL tasks are done
     const allDone = store.tasks.every((t) => t.status === 'done')
-    if (!allDone || store.tasks.length === 0) return
+    if (!allDone) return
+
+    // Check if we already delivered the final output
+    if (store.finalOutput) return
+
+    // Check if AM is already processing something
+    if (runningAgents.current.has(AM_INDEX)) return
+    runningAgents.current.add(AM_INDEX)
 
     store.addLogEntry({ agentIndex: AM_INDEX, action: 'all tasks completed — preparing final delivery' })
 
@@ -156,9 +172,15 @@ export function useAgencyOrchestrator() {
       const response = await callAccountManager(
         `All tasks are completed. Team outputs:\n\n${outputs}\n\nNow assemble the final prompt for the client and call notify_client_project_ready.`
       )
-      if (response.functionCall) processFunctionCall(response.functionCall, AM_INDEX)
+      if (response.functionCalls) {
+        for (const fn of response.functionCalls) {
+          processFunctionCall(fn, AM_INDEX)
+        }
+      }
     } catch (err) {
       console.error('[Orchestrator] final delivery error:', err)
+    } finally {
+      runningAgents.current.delete(AM_INDEX)
     }
   }
 
@@ -180,8 +202,10 @@ export function useAgencyOrchestrator() {
         agentIndex,
         userMessage: `You have been assigned task [${task.id}]: "${task.description}". Start working on it now. Call execute_work to begin.`,
       })
-      if (startResponse.functionCall) {
-        processFunctionCall(startResponse.functionCall, agentIndex)
+      if (startResponse.functionCalls) {
+        for (const fn of startResponse.functionCalls) {
+          processFunctionCall(fn, agentIndex)
+        }
       }
 
       // If the agent went on hold (approval needed), stop here — resumption handles the rest
@@ -201,8 +225,10 @@ export function useAgencyOrchestrator() {
         agentIndex,
         userMessage: `You have been working on task [${task.id}]: "${task.description}". Your work is done. Call complete_task with your final prompt output.`,
       })
-      if (completeResponse.functionCall) {
-        processFunctionCall(completeResponse.functionCall, agentIndex)
+      if (completeResponse.functionCalls) {
+        for (const fn of completeResponse.functionCalls) {
+          processFunctionCall(fn, agentIndex)
+        }
       }
     } catch (err) {
       console.error(`[Orchestrator] agent ${agentIndex} task error:`, err)
@@ -252,8 +278,10 @@ export function useAgencyOrchestrator() {
           `Propose a subtask for yourself or delegate. Use propose_subtask.`,
         )
 
-        if (response.functionCall) {
-          processFunctionCall(response.functionCall, agentIndex)
+        if (response.functionCalls) {
+          for (const fn of response.functionCalls) {
+            processFunctionCall(fn, agentIndex)
+          }
         }
 
         await sleep(1500)
@@ -307,14 +335,19 @@ export function useAgencyOrchestrator() {
       }
 
       try {
+        runningAgents.current.add(AM_INDEX)
         const response = await callAccountManager(text)
-        if (response.functionCall) {
-          processFunctionCall(response.functionCall, AM_INDEX)
+        if (response.functionCalls) {
+          for (const fn of response.functionCalls) {
+            processFunctionCall(fn, AM_INDEX)
+          }
         }
-        return response.text
+        return response.text || null
       } catch (err) {
         console.error('[Orchestrator] AM message error:', err)
         return null
+      } finally {
+        runningAgents.current.delete(AM_INDEX)
       }
     }
 
@@ -338,8 +371,10 @@ export function useAgencyOrchestrator() {
             agentIndex: npcIndex,
             userMessage: `Client responded: "${text}". Resume the task and complete it.`,
           })
-          if (response.functionCall) {
-            processFunctionCall(response.functionCall, npcIndex)
+          if (response.functionCalls) {
+            for (const fn of response.functionCalls) {
+              processFunctionCall(fn, npcIndex)
+            }
           }
           // Restart the work loop for this agent
           sceneRef.current?.setNpcWorking(npcIndex, true)
@@ -350,9 +385,13 @@ export function useAgencyOrchestrator() {
               agentIndex: npcIndex,
               userMessage: `Complete your task now. Call complete_task with your final prompt.`,
             })
-            if (completeRes.functionCall) processFunctionCall(completeRes.functionCall, npcIndex)
+            if (completeRes.functionCalls) {
+              for (const fn of completeRes.functionCalls) {
+                processFunctionCall(fn, npcIndex)
+              }
+            }
           })
-          return response.text
+          return response.text || null
         } catch (err) {
           console.error('[Orchestrator] approval resume error:', err)
           return null
