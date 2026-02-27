@@ -233,6 +233,7 @@ export class CharacterManager {
         } else {
             const poi = spawnPois[spawnIndex % spawnPois.length];
             if (poi) {
+                this.poiManager?.occupy(poi.id, i);
                 posArray[i * 4 + 0] = poi.position.x;
                 posArray[i * 4 + 2] = poi.position.z;
                 spawnIndex++;

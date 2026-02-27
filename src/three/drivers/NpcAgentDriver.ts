@@ -48,7 +48,7 @@ export class NpcAgentDriver implements IAgentDriver {
 
     // 1. Probabilidad alta de ir a trabajar (sit_work)
     if (rand < 0.4) {
-      const pois = this.controller.poiManager.getFreePois('sit_work');
+      const pois = this.controller.poiManager.getFreePois('sit_work', this.agentIndex);
       if (pois.length > 0) {
         const poi = pois[Math.floor(Math.random() * pois.length)];
         this.controller.walkToPoi(this.agentIndex, poi.id);
@@ -59,7 +59,7 @@ export class NpcAgentDriver implements IAgentDriver {
 
     // 2. Probabilidad media de ir a descansar (sit_idle)
     if (rand < 0.7) {
-      const pois = this.controller.poiManager.getFreePois('sit_idle');
+      const pois = this.controller.poiManager.getFreePois('sit_idle', this.agentIndex);
       if (pois.length > 0) {
         const poi = pois[Math.floor(Math.random() * pois.length)];
         this.controller.walkToPoi(this.agentIndex, poi.id);
@@ -78,15 +78,16 @@ export class NpcAgentDriver implements IAgentDriver {
 
     // 4. Standing: try wandering to an area POI
     if (rand < 0.9) {
-      const areaPois = this.controller.poiManager.getFreePoisByPrefix('area-');
+      const areaPois = this.controller.poiManager.getFreePoisByPrefix('area-', this.agentIndex);
       if (areaPois.length > 0) {
         const areaPoi = areaPois[Math.floor(Math.random() * areaPois.length)];
         const target = this.controller.poiManager.getRandomPointNearPoi(areaPoi.id, 3);
         if (target) {
-          this.controller.poiManager.releaseAll(this.agentIndex);
-          this.controller.moveTo(this.agentIndex, target, 'look_around');
-          this.behaviorTimer = Math.random() * 10 + 5;
-          return;
+          if (this.controller.moveTo(this.agentIndex, target, 'look_around')) {
+            this.controller.poiManager.releaseAll(this.agentIndex);
+            this.behaviorTimer = Math.random() * 10 + 5;
+            return;
+          }
         }
       }
     }

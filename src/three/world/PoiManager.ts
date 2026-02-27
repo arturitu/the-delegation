@@ -51,17 +51,19 @@ export class PoiManager {
     return this.pois.get(id);
   }
 
-  /** Returns all free POIs for a specific arrival state. */
-  public getFreePois(arrivalState: CharacterStateKey): PoiDef[] {
+  /** Returns all free POIs for a specific arrival state.
+   * If agentIndex is provided, include the POIs already occupied by that agent.
+   */
+  public getFreePois(arrivalState: CharacterStateKey, agentIndex?: number): PoiDef[] {
     return Array.from(this.pois.values()).filter(
-      p => p.arrivalState === arrivalState && p.occupiedBy === null
+      p => p.arrivalState === arrivalState && (p.occupiedBy === null || p.occupiedBy === agentIndex)
     );
   }
 
   /** Returns all free POIs that start with a specific ID prefix (e.g. 'spawn', 'area'). */
-  public getFreePoisByPrefix(prefix: string): PoiDef[] {
+  public getFreePoisByPrefix(prefix: string, agentIndex?: number): PoiDef[] {
     return Array.from(this.pois.values()).filter(
-      p => p.id.includes(prefix) && p.occupiedBy === null
+      p => p.id.includes(prefix) && (p.occupiedBy === null || p.occupiedBy === agentIndex)
     );
   }
 

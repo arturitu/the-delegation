@@ -65,9 +65,9 @@ export class CharacterController implements ICharacterDriver {
     target: THREE.Vector3,
     arrivalState: CharacterStateKey = 'idle',
     onArrival?: (index: number) => void,
-  ): void {
+  ): boolean {
     const positions = this.characterManager.getCPUPositions();
-    if (!positions) return;
+    if (!positions) return false;
 
     const from = new THREE.Vector3(
       positions[index * 4],
@@ -77,7 +77,7 @@ export class CharacterController implements ICharacterDriver {
 
     const path = this.navMesh.findPath(from, target);
 
-    if (path.length === 0) return;
+    if (path.length === 0) return false;
 
     // Ensure the agent ends up at the exact target position,
     // not at the nearest navmesh polygon boundary.
@@ -91,18 +91,17 @@ export class CharacterController implements ICharacterDriver {
 
     this.setPhysicsMode(index, AgentBehavior.GOTO);
     this.play(index, 'walk');
+
+    return true;
   }
 
   /**
    * Walk a character to a POI by ID.
    * Occupies the POI immediately; releases existing ones first.
    */
-  public walkToPoi(index: number, poiId: string, onArrival?: (index: number) => void): void {
+  public walkToPoi(index: number, poiId: string, onArrival?: (index: number) => void): boolean {
     const poi = this.poiManager.getPoi(poiId);
-    if (!poi || (poi.occupiedBy !== null && poi.occupiedBy !== index)) return;
-
-    this.poiManager.releaseAll(index);
-    this.poiManager.occupy(poiId, index);
+    if (!poi || (poi.occupiedBy !== null && poi.occupiedBy !== index)) return false;
 
     const targetState = poi.arrivalState;
     const isSitVariant = targetState === 'sit_idle' || targetState === 'sit_work';
@@ -114,8 +113,8 @@ export class CharacterController implements ICharacterDriver {
       this.stateMachine.prepareSitDown(index, targetState as 'sit_idle' | 'sit_work');
     }
 
-    // Navigate to the exact POI position.
-    this.moveTo(index, poi.position, 'idle', (i) => {
+    // Check path before releasing old POIs
+    const moved = this.moveTo(index, poi.position, 'idle', (i) => {
       // 1. Teleport to exact POI position (removes any sub-unit navmesh offset)
       this.characterManager.setPosition(i, poi.position);
 
@@ -135,6 +134,13 @@ export class CharacterController implements ICharacterDriver {
 
       onArrival?.(i);
     });
+
+    if (!moved) return false;
+
+    this.poiManager.releaseAll(index);
+    this.poiManager.occupy(poiId, index);
+
+    return true;
   }
 
   /** Speaking mouth animation overlay — independent of character state. */
