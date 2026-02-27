@@ -22,6 +22,8 @@ const UIOverlay: React.FC = () => {
   const {
     tasks,
     actionLog,
+    isKanbanOpen,
+    isLogOpen,
     setKanbanOpen,
     setLogOpen,
     pendingApprovalTaskId,
@@ -146,7 +148,7 @@ const UIOverlay: React.FC = () => {
               <h1 className="text-2xl font-black text-zinc-900 tracking-tight">The Embodied Agency</h1>
               <button
                 onClick={() => setHelpOpen(true)}
-                className="text-zinc-300 hover:text-zinc-500 transition-colors"
+                className="text-zinc-300 hover:text-zinc-500 transition-colors cursor-pointer"
               >
                 <HelpCircle size={22} strokeWidth={2} />
               </button>
@@ -156,108 +158,120 @@ const UIOverlay: React.FC = () => {
             </p>
           </div>
         </div>
-        {/* Header action buttons */}
+      </div>
+
+      {/* Bottom Bar: Log, Tasks (Left) and NPC Panel (Right) */}
+      <div className="flex justify-between items-end relative z-30 pointer-events-none mt-auto">
+        {/* Actions (Log & Tasks) */}
         <div className="flex gap-2 pointer-events-auto">
           <button
-            onClick={() => setKanbanOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm border border-black/10 rounded-xl shadow text-xs font-black uppercase tracking-widest text-zinc-600 hover:bg-white hover:text-zinc-900 transition-all"
-          >
-            Tasks
-            {activeTasks.length > 0 && (
-              <span className="bg-zinc-900 text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center">
-                {activeTasks.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setLogOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm border border-black/10 rounded-xl shadow text-xs font-black uppercase tracking-widest text-zinc-600 hover:bg-white hover:text-zinc-900 transition-all"
+            onClick={() => setLogOpen(!isLogOpen)}
+            className={`flex items-center gap-2 px-3 py-2 backdrop-blur-sm border border-black/10 rounded-xl shadow text-xs font-black uppercase tracking-widest transition-all cursor-pointer ${
+              isLogOpen
+                ? 'bg-zinc-900 text-white border-zinc-900'
+                : 'bg-white/90 text-zinc-600 hover:bg-white hover:text-zinc-900'
+            }`}
           >
             Log
             {actionLog.length > 0 && (
-              <span className="bg-zinc-900 text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center">
+              <span className={`${isLogOpen ? 'bg-white text-zinc-900' : 'bg-zinc-900 text-white'} text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center`}>
                 {actionLog.length}
               </span>
             )}
           </button>
-        </div>      </div>
+          <button
+            onClick={() => setKanbanOpen(!isKanbanOpen)}
+            className={`flex items-center gap-2 px-3 py-2 backdrop-blur-sm border border-black/10 rounded-xl shadow text-xs font-black uppercase tracking-widest transition-all cursor-pointer ${
+              isKanbanOpen
+                ? 'bg-zinc-900 text-white border-zinc-900'
+                : 'bg-white/90 text-zinc-600 hover:bg-white hover:text-zinc-900'
+            }`}
+          >
+            Tasks
+            {activeTasks.length > 0 && (
+              <span className={`${isKanbanOpen ? 'bg-white text-zinc-900' : 'bg-zinc-900 text-white'} text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center`}>
+                {activeTasks.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* NPC Info Panel — shown when an NPC is selected */}
+        {selectedAgent && (
+          <div className="w-72 bg-white/95 backdrop-blur-2xl rounded-2xl border border-black/10 shadow-2xl p-6 pointer-events-auto animate-in fade-in slide-in-from-right-4 duration-300 overflow-hidden relative">
+            {/* Color accent bar */}
+            <div
+              className="absolute top-0 left-0 w-full h-1.5"
+              style={{ backgroundColor: selectedAgent.color }}
+            />
+
+            <div className="mb-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-0.5">
+                {selectedAgent.department}
+              </p>
+              <h2 className="text-xl font-black text-zinc-900 leading-tight">{selectedAgent.role}</h2>
+            </div>
+
+            <div className="h-px bg-zinc-100 w-full mb-4" />
+
+            {/* Active task highlight */}
+            {selectedAgentActiveTask ? (
+              <div className="mb-6">
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2 flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: selectedAgent.color }}></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: selectedAgent.color }}></span>
+                  </span>
+                  Doing Now
+                </p>
+                <p className="text-sm text-zinc-800 leading-snug font-bold">
+                  "{selectedAgentActiveTask.description}"
+                </p>
+              </div>
+            ) : (
+              <div className="mb-6">
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2">
+                  Status
+                </p>
+                <p className="text-sm text-zinc-400 leading-snug italic font-medium">
+                  Waiting for next task...
+                </p>
+              </div>
+            )}
+
+            <div className="h-px bg-zinc-100 w-full mb-6" />
+
+            <div className="flex flex-col gap-2.5">
+              {isChatting ? (
+                <button
+                  onClick={handleEndChat}
+                  style={{ backgroundColor: selectedAgent.color }}
+                  className="w-full py-3 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:brightness-90 active:scale-[0.98] transition-all shadow-lg pointer-events-auto cursor-pointer"
+                >
+                  End Chat
+                </button>
+              ) : (
+                <button
+                  onClick={handleStartChat}
+                  className="w-full py-3 bg-zinc-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black active:scale-[0.98] transition-all shadow-lg shadow-zinc-200 pointer-events-auto cursor-pointer"
+                >
+                  Start Chat
+                </button>
+              )}
+              {!selectedAgent.isPlayer && (
+                <button
+                  onClick={() => setLogOpen(true, selectedNpcIndex ?? undefined)}
+                  className="w-full py-3 bg-zinc-100 text-zinc-600 border border-zinc-200 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white hover:text-zinc-900 active:scale-[0.98] transition-all pointer-events-auto cursor-pointer"
+                >
+                  Action Log
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Help Modal */}
-      <HelpModal isOpen={isHelpOpen} onClose={() => setHelpOpen(false)} />
-
-      {/* NPC Info Panel — shown when an NPC is selected */}
-      {selectedAgent && (
-        <div className="absolute bottom-6 left-8 w-72 bg-white/95 backdrop-blur-2xl rounded-2xl border border-black/10 shadow-2xl p-6 pointer-events-auto animate-in fade-in slide-in-from-left-4 duration-300 z-30 overflow-hidden">
-          {/* Color accent bar */}
-          <div
-            className="absolute top-0 left-0 w-full h-1.5"
-            style={{ backgroundColor: selectedAgent.color }}
-          />
-
-          <div className="mb-4">
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-0.5">
-              {selectedAgent.department}
-            </p>
-            <h2 className="text-xl font-black text-zinc-900 leading-tight">{selectedAgent.role}</h2>
-          </div>
-
-          <div className="h-px bg-zinc-100 w-full mb-4" />
-
-          {/* Active task highlight - Rediseñado para dar foco a la tarea */}
-          {selectedAgentActiveTask ? (
-            <div className="mb-6">
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2 flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: selectedAgent.color }}></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: selectedAgent.color }}></span>
-                </span>
-                Doing Now
-              </p>
-              <p className="text-sm text-zinc-800 leading-snug font-bold">
-                "{selectedAgentActiveTask.description}"
-              </p>
-            </div>
-          ) : (
-            <div className="mb-6">
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2">
-                Status
-              </p>
-              <p className="text-sm text-zinc-400 leading-snug italic font-medium">
-                Waiting for next task...
-              </p>
-            </div>
-          )}
-
-          <div className="h-px bg-zinc-100 w-full mb-6" />
-
-          <div className="flex flex-col gap-2.5">
-            {isChatting ? (
-              <button
-                onClick={handleEndChat}
-                style={{ backgroundColor: selectedAgent.color }}
-                className="w-full py-3 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:brightness-90 active:scale-[0.98] transition-all shadow-lg pointer-events-auto"
-              >
-                End Chat
-              </button>
-            ) : (
-              <button
-                onClick={handleStartChat}
-                className="w-full py-3 bg-zinc-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black active:scale-[0.98] transition-all shadow-lg shadow-zinc-200 pointer-events-auto"
-              >
-                Start Chat
-              </button>
-            )}
-            {!selectedAgent.isPlayer && (
-              <button
-                onClick={() => setLogOpen(true, selectedNpcIndex ?? undefined)}
-                className="w-full py-3 bg-zinc-100 text-zinc-600 border border-zinc-200 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white hover:text-zinc-900 active:scale-[0.98] transition-all pointer-events-auto"
-              >
-                Action Log
-              </button>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

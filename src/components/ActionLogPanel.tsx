@@ -55,7 +55,7 @@ export function ActionLogPanel() {
                       <h3 className="text-sm font-black text-zinc-900 leading-tight">{filterAgent.role}</h3>
                       <button
                         onClick={() => setLogOpen(true, null)}
-                        className="text-[8px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors uppercase tracking-widest border border-zinc-200 rounded-full px-1.5 py-0.5"
+                        className="text-[8px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors uppercase tracking-widest border border-zinc-200 rounded-full px-1.5 py-0.5 cursor-pointer"
                       >
                         All
                       </button>
@@ -69,7 +69,7 @@ export function ActionLogPanel() {
 
             <button
               onClick={() => setLogOpen(false)}
-              className="text-zinc-300 hover:text-zinc-600 transition-colors text-base leading-none pt-1"
+              className="text-zinc-300 hover:text-zinc-600 transition-colors text-base leading-none pt-1 cursor-pointer"
             >
               ✕
             </button>

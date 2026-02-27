@@ -266,7 +266,25 @@ export class SceneManager {
   /** Play or stop the working animation on an NPC. */
   public setNpcWorking(index: number, working: boolean): void {
     if (!this.controller) return;
-    this.controller.play(index, working ? 'sit_work' : 'idle');
+    if (working) {
+      const pois = this.poiManager.getFreePois('sit_work', index);
+      if (pois.length > 0) {
+        const poi = pois[Math.floor(Math.random() * pois.length)];
+        const positions = this.controller.getCPUPositions();
+        const currentPos = positions
+          ? new THREE.Vector3(
+              positions[index * 4],
+              positions[index * 4 + 1],
+              positions[index * 4 + 2],
+            )
+          : undefined;
+        this.controller.walkToPoi(index, poi.id, undefined, currentPos);
+      } else {
+        this.controller.play(index, 'sit_work');
+      }
+    } else {
+      this.controller.play(index, 'idle');
+    }
   }
 
   /** Walk an NPC to the boardroom area POI. */

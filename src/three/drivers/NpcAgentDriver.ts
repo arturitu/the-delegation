@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import { IAgentDriver } from '../../types';
 import { CharacterController } from '../CharacterController';
 import { AgentData } from '../../data/agents';
+import { useAgencyStore } from '../../store/agencyStore';
 
 /**
  * NpcAgentDriver — drives a single NPC autonomously.
@@ -9,13 +10,7 @@ import { AgentData } from '../../data/agents';
  * Each NPC in the scene has its own instance of this class.
  * The update() method is the entry point for all NPC autonomous behavior.
  *
- * Currently: NPCs remain in idle state (base skeleton to build on).
- *
- * Extend here to add:
- *  - Wandering between waypoints
- *  - Sitting at POIs
- *  - Reacting to player proximity
- *  - Scheduled routines (work → break → work)
+ * It respects the global Agency phase and individual task status to determine behavior.
  */
 export class NpcAgentDriver implements IAgentDriver {
   public readonly agentIndex: number;
@@ -33,9 +28,21 @@ export class NpcAgentDriver implements IAgentDriver {
 
   public update(positions: Float32Array, delta: number): void {
     const currentState = this.controller.getState(this.agentIndex);
+    const agencyState = useAgencyStore.getState();
+
+    // If the agent is currently "working" or "on hold" (waiting for approval)
+    // according to the agency system, we let the agency system control its main animation state.
+    const isBusyWithAgency = agencyState.tasks.some(
+      t => t.assignedAgentIds.includes(this.agentIndex) && (t.status === 'in_progress' || t.status === 'on_hold')
+    );
+
+    if (isBusyWithAgency) {
+       // While busy with agency tasks, the driver suspends autonomous random behaviors.
+       return;
+    }
 
     // Only decide new actions if we are currently resting in a stable state
-    if (currentState === 'idle' || currentState === 'sit_idle' || currentState === 'sit_work') {
+    if (currentState === 'idle' || currentState === 'sit_idle' || currentState === 'sit_work' || currentState === 'look_around') {
       this.behaviorTimer -= delta;
 
       if (this.behaviorTimer <= 0) {
@@ -54,39 +61,21 @@ export class NpcAgentDriver implements IAgentDriver {
       positions[this.agentIndex * 4 + 2]
     );
 
+    // When not busy with an agency task, NPCs follow a relaxed autonomous routine:
 
-    // 1. Probabilidad alta de ir a trabajar (sit_work)
+    // 1. Decent chance to go "sit_idle" or "sit_work" (just hanging at desk/lounge)
     if (rand < 0.4) {
-      const pois = this.controller.poiManager.getFreePois('sit_work', this.agentIndex);
-      if (pois.length > 0) {
-        const poi = pois[Math.floor(Math.random() * pois.length)];
-        this.controller.walkToPoi(this.agentIndex, poi.id, undefined, currentPos);
-        this.behaviorTimer = Math.random() * 15 + 15; // Trabajar durante 15-30 segundos
-        return;
-      }
-    }
-
-    // 2. Probabilidad media de ir a descansar (sit_idle)
-    if (rand < 0.7) {
       const pois = this.controller.poiManager.getFreePois('sit_idle', this.agentIndex);
       if (pois.length > 0) {
         const poi = pois[Math.floor(Math.random() * pois.length)];
         this.controller.walkToPoi(this.agentIndex, poi.id, undefined, currentPos);
-        this.behaviorTimer = Math.random() * 10 + 5; // Estar sentado 5-15 seg
+        this.behaviorTimer = Math.random() * 15 + 15;
         return;
       }
     }
 
-    // 3. If the NPC is currently seated (sit_idle / sit_work), never stand up via the
-    //    fallback path — only stand when actively finding a new POI (cases 1 & 2 above).
-    const currentState = this.controller.getState(this.agentIndex);
-    if (currentState === 'sit_idle' || currentState === 'sit_work') {
-      this.behaviorTimer = Math.random() * 7.5 + 5;
-      return;
-    }
-
-    // 4. Standing: try wandering to an area POI
-    if (rand < 0.9) {
+    // 2. Chance to wander to common areas
+    if (rand < 0.7) {
       const areaPois = this.controller.poiManager.getFreePoisByPrefix('area-', this.agentIndex);
       if (areaPois.length > 0) {
         const areaPoi = areaPois[Math.floor(Math.random() * areaPois.length)];
@@ -94,18 +83,18 @@ export class NpcAgentDriver implements IAgentDriver {
         if (target) {
           if (this.controller.moveTo(this.agentIndex, target, 'look_around', undefined, currentPos)) {
             this.controller.poiManager.releaseAll(this.agentIndex);
-            this.behaviorTimer = Math.random() * 5 + 2.5;
+            this.behaviorTimer = Math.random() * 5 + 5;
             return;
           }
         }
       }
     }
 
-    // 5. Standing idle fallback — play a short reaction animation
+    // 3. Fallback: play a short reaction animation
     const expressions: ('look_around' | 'wave' | 'happy')[] = ['look_around', 'wave', 'happy'];
     const randomAnim = expressions[Math.floor(Math.random() * expressions.length)];
     this.controller.play(this.agentIndex, randomAnim);
-    this.behaviorTimer = Math.random() * 2.5 + 2.5;
+    this.behaviorTimer = Math.random() * 5 + 5;
   }
 
   public dispose(): void {}

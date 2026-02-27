@@ -57,7 +57,7 @@ export function KanbanPanel() {
         <h2 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Task Board</h2>
         <button
           onClick={() => setKanbanOpen(false)}
-          className="text-zinc-300 hover:text-zinc-600 transition-colors text-base leading-none"
+          className="text-zinc-300 hover:text-zinc-600 transition-colors text-base leading-none cursor-pointer"
         >
           ✕
         </button>
