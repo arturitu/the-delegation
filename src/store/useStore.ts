@@ -7,7 +7,6 @@ export const useStore = create<CharacterState>()(
   (set) => ({
     isThinking: false,
     instanceCount: TOTAL_COUNT,
-    worldSize: 10,
 
     selectedNpcIndex: null,
     selectedPosition: null,
@@ -20,7 +19,6 @@ export const useStore = create<CharacterState>()(
     setThinking: (isThinking: boolean) => set({ isThinking }),
     setIsTyping: (isTyping: boolean) => set({ isTyping }),
     setInstanceCount: (count: number) => set({ instanceCount: count }),
-    setWorldSize: (size: number) => set({ worldSize: size }),
 
     setSelectedNpc: (index: number | null) => set({ selectedNpcIndex: index, selectedPosition: null }),
     setSelectedPosition: (pos: { x: number; y: number } | null) => set({ selectedPosition: pos }),

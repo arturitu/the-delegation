@@ -7,14 +7,14 @@ export class Stage {
   public camera: THREE.PerspectiveCamera;
   public controls: OrbitControls;
 
-  private plane: THREE.Mesh | null = null;
-  private gridHelper: THREE.GridHelper | null = null;
-
   private followTarget: THREE.Vector3 | null = null;
   private readonly defaultTarget = new THREE.Vector3(0, 0.8, 0);
 
   constructor(rendererElement: HTMLElement) {
     this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0xf4f4f5); // Slightly off-white
+
+    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
     this.scene.background = new THREE.Color(0xffffff);
 
     this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
@@ -63,41 +63,6 @@ export class Stage {
     dirLight.shadow.radius = 2;
     dirLight.shadow.autoUpdate = true;
     this.scene.add(dirLight);
-  }
-
-  public updateDimensions(radius: number) {
-    const diameter = radius * 2;
-    const gridDivisions = Math.round(diameter); // 1 unit per division approx
-
-    // 1. Remove old
-    if (this.plane) {
-        this.scene.remove(this.plane);
-        if (this.plane.geometry) this.plane.geometry.dispose();
-        if (this.plane.material instanceof THREE.Material) this.plane.material.dispose();
-    }
-    if (this.gridHelper) {
-        this.scene.remove(this.gridHelper);
-        if (this.gridHelper.geometry) this.gridHelper.geometry.dispose();
-        if (this.gridHelper.material instanceof THREE.Material) this.gridHelper.material.dispose();
-    }
-
-    // 2. Create New Plane
-    const planeGeometry = new THREE.PlaneGeometry(diameter, diameter);
-    planeGeometry.rotateX(-Math.PI / 2);
-    // Transparent materials receive shadows poorly in WebGPU — use opaque white
-    const planeMaterial = new THREE.MeshStandardNodeMaterial({
-      color: 0xffffff,
-      roughness: 1,
-      metalness: 0.35,
-    });
-    this.plane = new THREE.Mesh(planeGeometry, planeMaterial);
-    this.plane.receiveShadow = true;
-    this.plane.position.y = -0.012;
-    this.scene.add(this.plane);
-
-    // 3. Create New Grid
-    this.gridHelper = new THREE.GridHelper(diameter, gridDivisions, 0xcacaca, 0xdedede);
-    this.scene.add(this.gridHelper);
   }
 
   public onResize(width: number, height: number) {

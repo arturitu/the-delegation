@@ -64,8 +64,6 @@ export class CharacterManager {
 
   // Uniforms
   private uSpeed = uniform(0.015);
-  private uWorldSize = uniform(10.0);
-  private worldSize = 10.0;
 
   public isLoaded = false;
 
@@ -157,11 +155,6 @@ export class CharacterManager {
     }
   }
 
-  public updateWorldSize(size: number) {
-    this.uWorldSize.value = size;
-    this.worldSize = size;
-  }
-
   /**
    * Reads back the GPU position buffer to CPU.
    * Must be called after renderer.compute() each frame.
@@ -205,7 +198,7 @@ export class CharacterManager {
     const colorArray = new Float32Array(this.instanceCount * 3);
 
     const tempColor = new THREE.Color();
-    const spawnRadius = this.worldSize;
+    const spawnRadius = 8; // Default spawn area
 
     for (let i = 0; i < this.instanceCount; i++) {
       const agent = AGENTS[i] || AGENTS[0];

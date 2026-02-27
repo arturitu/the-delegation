@@ -10,7 +10,6 @@ export interface ChatMessage {
 export interface CharacterState {
   isThinking: boolean;
   instanceCount: number;
-  worldSize: number;
   selectedNpcIndex: number | null;
   selectedPosition: { x: number; y: number } | null;
   hoveredNpcIndex: number | null;
@@ -22,7 +21,6 @@ export interface CharacterState {
   setThinking: (isThinking: boolean) => void;
   setIsTyping: (isTyping: boolean) => void;
   setInstanceCount: (count: number) => void;
-  setWorldSize: (size: number) => void;
   setSelectedNpc: (index: number | null) => void;
   setSelectedPosition: (pos: { x: number; y: number } | null) => void;
   setHoveredNpc: (index: number | null, pos: { x: number; y: number } | null) => void;

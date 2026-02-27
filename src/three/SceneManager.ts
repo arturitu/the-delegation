@@ -1,11 +1,13 @@
 
 import * as THREE from 'three/webgpu';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Engine } from './core/Engine';
 import { Stage } from './core/Stage';
 import { CharacterManager } from './entities/CharacterManager';
 import { CharacterController } from './CharacterController';
 import { NavMeshManager } from './pathfinding/NavMeshManager';
 import { PoiManager } from './world/PoiManager';
+import { WorldManager } from './world/WorldManager';
 import { DriverManager } from './drivers/DriverManager';
 import { InputManager } from './input/InputManager';
 import { AGENTS, PLAYER_INDEX, NPC_START_INDEX } from '../data/agents';
@@ -21,6 +23,7 @@ export class SceneManager {
   private controller: CharacterController | null = null;
   private navMesh: NavMeshManager;
   private poiManager: PoiManager;
+  private worldManager: WorldManager;
   private driverManager: DriverManager | null = null;
   private inputManager: InputManager | null = null;
 
@@ -36,22 +39,26 @@ export class SceneManager {
     this.characterManager = new CharacterManager(this.stage.scene);
     this.navMesh = new NavMeshManager();
     this.poiManager = new PoiManager();
+    this.worldManager = new WorldManager(this.stage.scene, this.navMesh, this.poiManager);
     this.init();
   }
 
   private async init() {
     await this.engine.init();
     if (this.isDisposed) return;
+
+    // 1. Load World & Office Assets
+    await this.worldManager.load();
+
+    // 2. Load Characters
     await this.characterManager.load();
     if (this.isDisposed) return;
 
     const state = useStore.getState();
     this.characterManager.setInstanceCount(state.instanceCount);
-    this.characterManager.updateWorldSize(state.worldSize);
-    this.stage.updateDimensions(state.worldSize);
 
-    // Build navmesh from the current world radius
-    this.navMesh.buildFromPlane(state.worldSize);
+    // Note: Stage.updateDimensions() removed, using static office
+    // Note: NavMesh.buildFromPlane() removed, using static navmesh from GLB
 
     // CharacterController — unified character API
     this.controller = new CharacterController(
@@ -74,7 +81,6 @@ export class SceneManager {
       this.stage.camera,
       () => this.controller!.getCPUPositions(),
       () => this.controller!.getCount(),
-      () => useStore.getState().worldSize,
       (index) => {
         const storeState = useStore.getState();
         if (storeState.isChatting) {
@@ -85,6 +91,7 @@ export class SceneManager {
       },
       (x, z) => playerDriver.onFloorClick(x, z),
       (index, pos) => useStore.getState().setHoveredNpc(index, pos),
+      this.worldManager.getOffice() ?? undefined
     );
 
     this.engine.renderer.setAnimationLoop(this.animate.bind(this));
@@ -95,11 +102,8 @@ export class SceneManager {
       if (s.instanceCount !== prev.instanceCount) {
         this.controller?.setInstanceCount(s.instanceCount);
       }
-      if (s.worldSize !== prev.worldSize) {
-        this.controller?.updateWorldSize(s.worldSize);
-        this.stage.updateDimensions(s.worldSize);
-        this.navMesh.buildFromPlane(s.worldSize);
-      }
+      // worldSize removal — now using static office
+
       // isChatting/isThinking/isTyping → update character visuals
       const chatChanged = s.isChatting !== prev.isChatting
         || s.isThinking !== prev.isThinking

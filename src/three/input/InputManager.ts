@@ -22,10 +22,10 @@ export class InputManager {
     private camera: THREE.PerspectiveCamera,
     private getPositions: () => Float32Array | null,
     private getCount: () => number,
-    private getWorldSize: () => number,
     private onSelect: (index: number | null) => void,
     private onWaypoint: (x: number, z: number) => void,
     private onHover: (index: number | null, pos: { x: number; y: number } | null) => void,
+    private raycastObject?: THREE.Object3D,
   ) {
     this.boundPointerDown = this.handlePointerDown.bind(this);
     this.boundPointerMove = this.handlePointerMove.bind(this);
@@ -81,18 +81,10 @@ export class InputManager {
           this.onHover(effectiveHoverIdx, { x, y });
         }
       } else {
-        // Check floor intersection for pointer cursor
-        this.raycaster.setFromCamera(this.pointer, this.camera);
-        const target = new THREE.Vector3();
-        const intersectsFloor = this.raycaster.ray.intersectPlane(FLOOR_PLANE, target);
-
-        if (intersectsFloor) {
-          const worldSize = this.getWorldSize();
-          if (Math.abs(target.x) <= worldSize && Math.abs(target.z) <= worldSize) {
-            this.canvas.style.cursor = 'pointer';
-          } else if (this.canvas.style.cursor === 'pointer') {
-            this.canvas.style.cursor = 'auto';
-          }
+        // Detect floor/world intersection for cursor feedback
+        const target = this.getWorldClickPosition();
+        if (target) {
+          this.canvas.style.cursor = 'pointer';
         } else if (this.canvas.style.cursor === 'pointer') {
           this.canvas.style.cursor = 'auto';
         }
@@ -172,13 +164,30 @@ export class InputManager {
         this.onSelect(null);
       } else {
         // If nothing was selected, move the player
-        const target = new THREE.Vector3();
-        this.raycaster.setFromCamera(this.pointer, this.camera);
-        if (this.raycaster.ray.intersectPlane(FLOOR_PLANE, target)) {
+        const target = this.getWorldClickPosition();
+        if (target) {
           this.onWaypoint(target.x, target.z);
         }
       }
     }
+  }
+
+  private getWorldClickPosition(): THREE.Vector3 | null {
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+
+    if (this.raycastObject) {
+      const intersects = this.raycaster.intersectObject(this.raycastObject, true);
+      if (intersects.length > 0) {
+        // Find first mesh that is NOT a navmesh
+        const validMatch = intersects.find(hit => !hit.object.name.toLowerCase().includes('navmesh'));
+        return validMatch ? validMatch.point : null;
+      }
+      return null;
+    }
+
+    // Fallback to infinite plane
+    const target = new THREE.Vector3();
+    return this.raycaster.ray.intersectPlane(FLOOR_PLANE, target) ? target : null;
   }
 
   public dispose() {

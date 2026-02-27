@@ -190,10 +190,6 @@ export class CharacterController implements ICharacterDriver {
     this.stateMachine = new CharacterStateMachine(newCount);
   }
 
-  public updateWorldSize(size: number): void {
-    this.characterManager.updateWorldSize(size);
-  }
-
   public get isLoaded(): boolean {
     return this.characterManager.isLoaded;
   }

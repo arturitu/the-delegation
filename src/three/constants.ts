@@ -28,7 +28,5 @@ export const PATH_NODE_ARRIVAL = 0.25;
 export const ARRIVAL_RADIUS = 0.3;
 /** Distance at which player↔NPC encounter is triggered. */
 export const ENCOUNTER_RADIUS = 1.5;
-/** Subdivision segments for the procedural navmesh plane. */
-export const NAVMESH_SUBDIVISIONS = 10;
 /** Zone ID used with three-pathfinding. */
 export const NAVMESH_ZONE = 'level';
