@@ -56,7 +56,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ canvasRef, isFullscreen
         </div>
       </div>
 
-      <div ref={canvasRef} className="flex-1 min-h-0 relative">
+      <div ref={canvasRef} className="flex-1 min-h-0 relative overflow-hidden bg-black/5">
         <UIOverlay />
       </div>
     </div>

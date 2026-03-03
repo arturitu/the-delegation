@@ -28,22 +28,21 @@ const App: React.FC = () => {
   const managerRef = useRef<SceneManager | null>(null);
   const [sceneManager, setSceneManager] = useState<SceneManager | null>(null);
   const { isChatting } = useStore();
-  const { isLogOpen, isKanbanOpen } = useAgencyStore();
+  const { isLogOpen, isKanbanOpen, setIsResizing } = useAgencyStore();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [kanbanHeight, setKanbanHeight] = useState(320);
-  const [isResizing, setIsResizing] = useState(false);
 
   const startResizing = useCallback(() => {
     setIsResizing(true);
-  }, []);
+  }, [setIsResizing]);
 
   const stopResizing = useCallback(() => {
     setIsResizing(false);
-  }, []);
+  }, [setIsResizing]);
 
   const resize = useCallback((e: MouseEvent) => {
-    if (isResizing) {
+    if (useAgencyStore.getState().isResizing) {
       const windowHeight = window.innerHeight;
       const newHeight = windowHeight - e.clientY;
       const minHeight = windowHeight * 0.3;
@@ -52,7 +51,7 @@ const App: React.FC = () => {
         setKanbanHeight(newHeight);
       }
     }
-  }, [isResizing]);
+  }, []);
 
   useEffect(() => {
     window.addEventListener('mousemove', resize);
@@ -97,7 +96,7 @@ const App: React.FC = () => {
             {/* Resize Bar */}
             {isKanbanOpen && !isFullscreen && (
               <div
-                className={`h-2 hover:h-2 bg-transparent hover:bg-zinc-200 border-t border-black/5 transition-colors cursor-row-resize z-30 flex items-center justify-center group shrink-0 ${isResizing ? 'bg-zinc-300' : ''}`}
+                className={`h-2 hover:h-2 bg-transparent hover:bg-zinc-200 border-t border-black/5 transition-colors cursor-row-resize z-30 flex items-center justify-center group shrink-0 ${useAgencyStore.getState().isResizing ? 'bg-zinc-300' : ''}`}
                 onMouseDown={startResizing}
               >
                 <div className="w-12 h-1 bg-zinc-300 rounded-full group-hover:bg-zinc-400" />

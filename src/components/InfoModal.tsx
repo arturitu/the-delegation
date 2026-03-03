@@ -44,8 +44,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ onClose }) => {
                 </button>
 
                 <p className="text-[9px] font-bold text-zinc-300 uppercase tracking-[0.15em] text-center leading-loose">
-                  An experiment by <a href="https://unboring.net" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-zinc-900 transition-colors">Arturo Paracuellos</a><br/>
-                  Powered by Gemini
+                  An experiment by <a href="https://unboring.net" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-zinc-900 transition-colors">Arturo Paracuellos</a>
                 </p>
               </div>
             </div>

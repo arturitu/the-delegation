@@ -45,33 +45,35 @@ interface AgencyState {
   // ── UI ───────────────────────────────────────────────────────
   isKanbanOpen: boolean
   isLogOpen: boolean
-  isFinalOutputOpen: boolean
-  pendingApprovalTaskId: string | null
-  logFilterAgentIndex: number | null
+  isFinalOutputOpen: boolean;
+  pendingApprovalTaskId: string | null;
+  logFilterAgentIndex: number | null;
+  isResizing: boolean;
 
   // ── Actions — Project ─────────────────────────────────────────
-  setClientBrief: (brief: string) => void
-  setPhase: (phase: ProjectPhase) => void
-  setFinalOutput: (output: string) => void
+  setClientBrief: (brief: string) => void;
+  setPhase: (phase: ProjectPhase) => void;
+  setFinalOutput: (output: string) => void;
 
   // ── Actions — Tasks ───────────────────────────────────────────
-  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Task
-  updateTaskStatus: (taskId: string, status: TaskStatus) => void
-  setTaskOutput: (taskId: string, output: string) => void
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Task;
+  updateTaskStatus: (taskId: string, status: TaskStatus) => void;
+  setTaskOutput: (taskId: string, output: string) => void;
 
   // ── Actions — Log ─────────────────────────────────────────────
-  addLogEntry: (entry: Omit<ActionLogEntry, 'id' | 'timestamp'>) => void
+  addLogEntry: (entry: Omit<ActionLogEntry, 'id' | 'timestamp'>) => void;
 
   // ── Actions — History ───────────────────────────────────────
-  appendAgentHistory: (agentIndex: number, role: 'user' | 'assistant', parts: any[]) => void
-  appendBoardroomHistory: (taskId: string, role: 'user' | 'assistant', parts: any[]) => void
-  clearAllHistories: () => void
+  appendAgentHistory: (agentIndex: number, role: 'user' | 'assistant', parts: any[]) => void;
+  appendBoardroomHistory: (taskId: string, role: 'user' | 'assistant', parts: any[]) => void;
+  clearAllHistories: () => void;
 
   // ── Actions — UI ──────────────────────────────────────────────
-  setKanbanOpen: (open: boolean) => void
-  setLogOpen: (open: boolean, filterAgent?: number | null) => void
-  setFinalOutputOpen: (open: boolean) => void
-  setPendingApproval: (taskId: string | null) => void
+  setKanbanOpen: (open: boolean) => void;
+  setLogOpen: (open: boolean, filterAgent?: number | null) => void;
+  setFinalOutputOpen: (open: boolean) => void;
+  setPendingApproval: (taskId: string | null) => void;
+  setIsResizing: (isResizing: boolean) => void;
 }
 
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
@@ -89,6 +91,7 @@ export const useAgencyStore = create<AgencyState>((set) => ({
   isFinalOutputOpen: false,
   pendingApprovalTaskId: null,
   logFilterAgentIndex: null,
+  isResizing: false,
 
   setClientBrief: (brief) => set({ clientBrief: brief }),
   setPhase: (phase) => set({ phase }),
@@ -162,4 +165,5 @@ export const useAgencyStore = create<AgencyState>((set) => ({
     set({ isLogOpen: open, logFilterAgentIndex: filterAgent ?? null }),
   setFinalOutputOpen: (open) => set({ isFinalOutputOpen: open }),
   setPendingApproval: (taskId) => set({ pendingApprovalTaskId: taskId }),
+  setIsResizing: (resizing) => set({ isResizing: resizing }),
 }))

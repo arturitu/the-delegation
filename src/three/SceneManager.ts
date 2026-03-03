@@ -11,6 +11,7 @@ import { DriverManager } from './drivers/DriverManager';
 import { InputManager } from './input/InputManager';
 import { AGENTS, PLAYER_INDEX, NPC_START_INDEX } from '../data/agents';
 import { useStore } from '../store/useStore';
+import { useAgencyStore } from '../store/agencyStore';
 import { AgentBehavior, ChatMessage } from '../types';
 import { BUBBLE_Y_OFFSET } from './constants';
 
@@ -338,8 +339,16 @@ export class SceneManager {
     const w = this.container.clientWidth;
     const h = this.container.clientHeight;
     if (w === 0 || h === 0) return;
-    this.engine.onResize(w, h);
+
+    // Always update camera aspect ratio for immediate visual scaling (fluid)
     this.stage.onResize(w, h);
+
+    // Only update the renderer buffer if we are not actively dragging a panel.
+    // This avoids expensive GPU reallocations during the drag, while the
+    // CSS-driven sizing (100% width/height) handles the visual stretch.
+    if (!useAgencyStore.getState().isResizing) {
+      this.engine.onResize(w, h);
+    }
   }
 
   private animate() {
@@ -364,7 +373,7 @@ export class SceneManager {
     this.stage.setFollowTarget(followPos);
 
     // 4. NPC screen-space bubble position
-    const { selectedNpcIndex, setSelectedPosition } = useStore.getState();
+    const { selectedNpcIndex, setSelectedPosition, selectedPosition } = useStore.getState();
     if (selectedNpcIndex !== null && this.controller) {
       const npcPos = this.controller.getCPUPosition(selectedNpcIndex);
       if (npcPos) {
@@ -373,13 +382,20 @@ export class SceneManager {
         screenPos.project(this.stage.camera);
 
         const rect = this.container.getBoundingClientRect();
-        setSelectedPosition({
-          x: (screenPos.x * 0.5 + 0.5) * rect.width,
-          y: (screenPos.y * -0.5 + 0.5) * rect.height,
-        });
+        const nextX = (screenPos.x * 0.5 + 0.5) * rect.width;
+        const nextY = (screenPos.y * -0.5 + 0.5) * rect.height;
+
+        // Optimization: only update state if the position has changed significantly (e.g. > 0.5px)
+        // This reduces Unnecessary React re-renders in the main loop.
+        const dx = Math.abs(nextX - (selectedPosition?.x ?? 0));
+        const dy = Math.abs(nextY - (selectedPosition?.y ?? 0));
+
+        if (dx > 0.5 || dy > 0.5) {
+          setSelectedPosition({ x: nextX, y: nextY });
+        }
       }
     } else {
-      setSelectedPosition(null);
+      if (selectedPosition !== null) setSelectedPosition(null);
     }
 
     // 5. Chat camera mode
