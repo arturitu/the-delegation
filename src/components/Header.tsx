@@ -40,18 +40,6 @@ const Header: React.FC = () => {
 
       {/* Right: Global Controls */}
       <div className="flex items-center gap-4">
-        {/* Step/Resume Button (Visible when paused by auto-pause) */}
-        {isPaused && (
-          <button
-            onClick={() => setPaused(false)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-[11px] font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer"
-            title="Resume Execution"
-          >
-            <Play size={14} fill="currentColor" />
-            <span>Resume</span>
-          </button>
-        )}
-
         <button
           onClick={togglePauseOnCall}
           className={`flex items-center gap-2 px-3 py-1.5 rounded text-[11px] font-bold uppercase tracking-wider transition-all border cursor-pointer ${

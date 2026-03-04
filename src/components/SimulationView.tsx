@@ -2,6 +2,7 @@ import React from 'react';
 import UIOverlay from './UIOverlay';
 import { Play, Pause, Maximize2, Minimize2 } from 'lucide-react';
 import { useAgencyStore } from '../store/agencyStore';
+import { AGENTS } from '../data/agents';
 
 interface SimulationViewProps {
   canvasRef: React.RefObject<HTMLDivElement>;
@@ -13,6 +14,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ canvasRef, isFullscreen
   const isPaused = useAgencyStore((s) => s.isPaused);
   const setPaused = useAgencyStore((s) => s.setPaused);
   const isPlaying = !isPaused;
+  const agentCount = AGENTS.length - 1; // Exclude player agent from count
 
   return (
     <div className="flex flex-col flex-1 min-w-0 min-h-0 relative">
@@ -20,6 +22,9 @@ const SimulationView: React.FC<SimulationViewProps> = ({ canvasRef, isFullscreen
       <div className="h-10 border-b border-black/5 flex items-center justify-between px-5 bg-white shrink-0">
         <div className="flex-1 flex items-center gap-2">
           <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Simulation View</span>
+          <span className="text-[10px] font-medium text-zinc-400 bg-zinc-50 px-1.5 py-0.5 rounded border border-zinc-100">
+            {agentCount} AGENTS
+          </span>
         </div>
 
         {/* Centered Controls */}
@@ -33,18 +38,18 @@ const SimulationView: React.FC<SimulationViewProps> = ({ canvasRef, isFullscreen
                 : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'
             }`}
           >
-            <Play size={14} fill={isPlaying ? "currentColor" : "none"} />
+            <Play size={14} fill="none" />
           </button>
           <button
             onClick={() => setPaused(true)}
             disabled={!isPlaying}
             className={`p-1 border rounded transition-all cursor-pointer ${
               !isPlaying
-                ? 'bg-zinc-50 text-amber-500 border-amber-100/50'
+                ? 'bg-zinc-50 text-zinc-300 border-zinc-100'
                 : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'
             }`}
           >
-            <Pause size={14} fill={!isPlaying ? "currentColor" : "none"} />
+            <Pause size={14} fill="none" />
           </button>
         </div>
 
