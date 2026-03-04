@@ -2,11 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { useSceneManager } from '../three/SceneContext';
 import { useAgencyStore } from '../store/agencyStore';
-import { AGENTS } from '../data/agents';
+import { AGENTS, AM_INDEX } from '../data/agents';
 import { Send, FolderOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
-const AM_INDEX = 1;
 
 const ChatPanel: React.FC = () => {
   const {

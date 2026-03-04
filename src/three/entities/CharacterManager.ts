@@ -338,7 +338,7 @@ export class CharacterManager {
       instancedGeometry.copy(geometry as any);
       instancedGeometry.instanceCount = this.instanceCount;
 
-      // Solo dejamos el atributo que NO se calcula en el Compute Shader
+      // Only keep the attribute NOT computed in the Compute Shader
       if (this.colorAttribute) instancedGeometry.setAttribute('instanceColor', this.colorAttribute);
 
       const material = new THREE.MeshStandardNodeMaterial();
@@ -358,7 +358,7 @@ export class CharacterManager {
         material.uvNode = uv().add(expressionData.zw);
       }
 
-      // Solo coloreamos el mesh cuyo nombre sea 'body'
+      // Only apply instance color to the 'body' mesh
       if (name.toLowerCase().includes('body')) {
         if (map) {
           const texColor = texture(map);
@@ -367,7 +367,7 @@ export class CharacterManager {
           material.colorNode = vec4(instanceColor, 1.0);
         }
       } else {
-        // Los otros respetan la transparencia original de su mapa PNG
+        // Other meshes preserve the original transparency from their PNG map
         material.transparent = true;
         if (map) {
           const texColor = isEyes || isMouth ? texture(map, material.uvNode) : texture(map);
@@ -552,15 +552,6 @@ export class CharacterManager {
     }
   }
 
-  public getAnimationIndex(index: number): number {
-    if (!this.agentStateBuffer || index < 0 || index >= this.instanceCount) return 0;
-    return this.agentStateBuffer.getAnimation(index);
-  }
-
-  public getAnimationMeta(name: AnimationName) {
-    return this.animationsMeta[name];
-  }
-
   /** Returns the baked clip duration in seconds. Returns 1.0 if the animation is not found. */
   public getAnimationDuration(name: AnimationName): number {
     return this.animationsMeta[name]?.duration ?? 1.0;
@@ -579,11 +570,4 @@ export class CharacterManager {
     // Note: External logic should handle TALK/IDLE animations
   }
 
-  public setColors(hexColors: string[]) {
-    this.colors = hexColors;
-    if (this.isLoaded) {
-      this.cleanupInstances();
-      this.initInstances();
-    }
-  }
 }

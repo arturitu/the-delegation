@@ -19,18 +19,16 @@ export class ToolHandlerService {
 
     switch (fn.name) {
       case 'propose_task': {
-        const { agentIds, title, description, requiresApproval } = fn.args as {
+        const { agentIds, title, description } = fn.args as {
           agentIds: number[];
           title: string;
           description: string;
-          requiresApproval: boolean;
         };
         const task = store.addTask({
           title: title || 'New Task',
           description,
           assignedAgentIds: agentIds,
           status: 'scheduled',
-          requiresClientApproval: requiresApproval ?? false,
         });
 
         const assignedRoles = agentIds
@@ -61,23 +59,6 @@ export class ToolHandlerService {
         return true;
       }
 
-      case 'request_client_approval': {
-        const { taskId, question } = fn.args as { taskId: string; question: string };
-        store.updateTaskStatus(taskId, 'on_hold');
-        store.setPendingApproval(taskId);
-        store.addLogEntry({
-          agentIndex: callerIndex,
-          action: `requested client approval — "${question}"`,
-          taskId,
-        });
-        scene?.setNpcWorking(callerIndex, false);
-        // Move agent to boardroom and stop working
-        if (scene && 'moveNpcToBoardroom' in scene) {
-          (scene as any).moveNpcToBoardroom(callerIndex);
-        }
-        return true;
-      }
-
       case 'complete_task': {
         const { taskId, output } = fn.args as { taskId: string; output: string };
         store.updateTaskStatus(taskId, 'done');
@@ -88,30 +69,6 @@ export class ToolHandlerService {
           taskId,
         });
         scene?.setNpcWorking(callerIndex, false);
-        return true;
-      }
-
-      case 'propose_subtask': {
-        const { agentId, title, description } = fn.args as { agentId: number; title: string; description: string };
-        const parentTask = store.tasks.find(
-          (t) => t.assignedAgentIds.includes(callerIndex) && t.status === 'in_progress'
-        );
-        const sub = store.addTask({
-          title: title || 'Subtask',
-          description,
-          assignedAgentIds: [agentId],
-          status: 'scheduled',
-          requiresClientApproval: false,
-          parentTaskId: parentTask?.id,
-        });
-
-        const agentRole = AGENTS.find(a => a.index === agentId)?.role || `Agent #${agentId}`;
-
-        store.addLogEntry({
-          agentIndex: callerIndex,
-          action: `proposed subtask for ${agentRole} — "${title || description}"`,
-          taskId: sub.id,
-        });
         return true;
       }
 

@@ -1,9 +1,9 @@
 
 import { create } from 'zustand';
-import { CharacterState } from '../types';
+import { UIState } from '../types';
 import { AGENTS } from '../data/agents';
 
-export const useStore = create<CharacterState>()(
+export const useStore = create<UIState>()(
   (set) => ({
     isThinking: false,
     instanceCount: AGENTS.length,
@@ -18,6 +18,7 @@ export const useStore = create<CharacterState>()(
     isTyping: false,
     chatMessages: [],
     inspectorTab: 'info',
+    isResizing: false,
 
     llmConfig: (() => {
       try {
@@ -34,6 +35,7 @@ export const useStore = create<CharacterState>()(
     setThinking: (isThinking: boolean) => set({ isThinking }),
     setIsTyping: (isTyping: boolean) => set({ isTyping }),
     setInspectorTab: (tab: 'info' | 'chat') => set({ inspectorTab: tab }),
+    setIsResizing: (isResizing: boolean) => set({ isResizing }),
     setInstanceCount: (count: number) => set({ instanceCount: count }),
 
     setSelectedNpc: (index: number | null) => set({
@@ -54,6 +56,10 @@ export const useStore = create<CharacterState>()(
       hoverPosition: pos,
       hoveredNpcIndex: null,
     }),
-    setLlmConfig: (config) => set((s) => ({ llmConfig: { ...s.llmConfig, ...config } })),
+    setLlmConfig: (config) => set((s) => {
+      const merged = { ...s.llmConfig, ...config };
+      try { localStorage.setItem('byok-config', JSON.stringify(merged)); } catch {}
+      return { llmConfig: merged };
+    }),
   })
 );

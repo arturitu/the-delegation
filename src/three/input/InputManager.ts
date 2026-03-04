@@ -6,6 +6,22 @@ import { PoiDef } from '../../types';
 const DRAG_THRESHOLD_PX = 4;
 const FLOOR_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0),0); // y=0
 
+export interface InputManagerOptions {
+  canvas: HTMLElement;
+  camera: THREE.PerspectiveCamera;
+  getPositions: () => Float32Array | null;
+  getCount: () => number;
+  onSelect: (index: number | null) => void;
+  onWaypoint: (x: number, z: number) => void;
+  onHover: (index: number | null, pos: { x: number; y: number } | null) => void;
+  getPois: () => PoiDef[];
+  onPoiHover: (id: string | null, label: string | null, pos: { x: number; y: number } | null) => void;
+  onPoiClick: (id: string) => void;
+  raycastObject?: THREE.Object3D;
+  isPointValid?: (point: THREE.Vector3) => boolean;
+  getIsPaused?: () => boolean;
+}
+
 export class InputManager {
   private raycaster = new THREE.Raycaster();
   private pointer = new THREE.Vector2();
@@ -18,27 +34,41 @@ export class InputManager {
 
   public selectedIndex: number | null = null;
 
-  constructor(
-    private canvas: HTMLElement,
-    private camera: THREE.PerspectiveCamera,
-    private getPositions: () => Float32Array | null,
-    private getCount: () => number,
-    private onSelect: (index: number | null) => void,
-    private onWaypoint: (x: number, z: number) => void,
-    private onHover: (index: number | null, pos: { x: number; y: number } | null) => void,
-    private getPois: () => PoiDef[],
-    private onPoiHover: (id: string | null, label: string | null, pos: { x: number; y: number } | null) => void,
-    private onPoiClick: (id: string) => void,
-    private raycastObject?: THREE.Object3D,
-    private isPointValid?: (point: THREE.Vector3) => boolean,
-    private getIsPaused?: () => boolean,
-  ) {
+  private canvas: HTMLElement;
+  private camera: THREE.PerspectiveCamera;
+  private getPositions: () => Float32Array | null;
+  private getCount: () => number;
+  private onSelect: (index: number | null) => void;
+  private onWaypoint: (x: number, z: number) => void;
+  private onHover: (index: number | null, pos: { x: number; y: number } | null) => void;
+  private getPois: () => PoiDef[];
+  private onPoiHover: (id: string | null, label: string | null, pos: { x: number; y: number } | null) => void;
+  private onPoiClick: (id: string) => void;
+  private raycastObject?: THREE.Object3D;
+  private isPointValid?: (point: THREE.Vector3) => boolean;
+  private getIsPaused?: () => boolean;
+
+  constructor(opts: InputManagerOptions) {
+    this.canvas = opts.canvas;
+    this.camera = opts.camera;
+    this.getPositions = opts.getPositions;
+    this.getCount = opts.getCount;
+    this.onSelect = opts.onSelect;
+    this.onWaypoint = opts.onWaypoint;
+    this.onHover = opts.onHover;
+    this.getPois = opts.getPois;
+    this.onPoiHover = opts.onPoiHover;
+    this.onPoiClick = opts.onPoiClick;
+    this.raycastObject = opts.raycastObject;
+    this.isPointValid = opts.isPointValid;
+    this.getIsPaused = opts.getIsPaused;
+
     this.boundPointerDown = this.handlePointerDown.bind(this);
     this.boundPointerMove = this.handlePointerMove.bind(this);
     this.boundPointerUp = this.handlePointerUp.bind(this);
-    canvas.addEventListener('pointerdown', this.boundPointerDown);
-    canvas.addEventListener('pointermove', this.boundPointerMove);
-    canvas.addEventListener('pointerup', this.boundPointerUp);
+    this.canvas.addEventListener('pointerdown', this.boundPointerDown);
+    this.canvas.addEventListener('pointermove', this.boundPointerMove);
+    this.canvas.addEventListener('pointerup', this.boundPointerUp);
   }
 
   private handlePointerDown(event: PointerEvent) {

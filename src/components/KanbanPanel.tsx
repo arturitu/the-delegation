@@ -5,7 +5,6 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 
 const COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: 'scheduled',   label: 'Scheduled'   },
-  { status: 'on_hold',     label: 'On Hold'      },
   { status: 'in_progress', label: 'In Progress'  },
   { status: 'done',        label: 'Done'         },
 ]
@@ -54,11 +53,6 @@ function TaskCard({ task }: { task: Task; key?: string }) {
       <div className="flex flex-wrap gap-1.5 pt-1">
         {task.assignedAgentIds.map(renderAgentTag)}
       </div>
-      {task.status === 'on_hold' && (
-        <span className="inline-block text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
-          awaiting input
-        </span>
-      )}
       {task.status === 'in_progress' && (
         <span className="inline-block text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5">
           working

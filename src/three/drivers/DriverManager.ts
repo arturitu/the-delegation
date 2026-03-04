@@ -1,6 +1,8 @@
+import * as THREE from 'three/webgpu';
 import { IAgentDriver } from '../../types';
 import { CharacterController } from '../CharacterController';
-import { AgentData, PLAYER_INDEX } from '../../data/agents';
+import { PLAYER_INDEX } from '../../data/agents';
+import { AgentData } from '../../types';
 import { PlayerInputDriver } from './PlayerInputDriver';
 import { NpcAgentDriver } from './NpcAgentDriver';
 
@@ -63,6 +65,29 @@ export class DriverManager {
     const driver = this.drivers.get(agentIndex);
     if (driver instanceof NpcAgentDriver) {
       driver.kick();
+    }
+  }
+
+  /** Play or stop the working animation on an NPC, walking it to a free desk POI if available. */
+  public setNpcWorking(agentIndex: number, working: boolean): void {
+    if (working) {
+      const pois = this.controller.poiManager.getFreePois('sit_work', agentIndex);
+      if (pois.length > 0) {
+        const poi = pois[Math.floor(Math.random() * pois.length)];
+        const positions = this.controller.getCPUPositions();
+        const currentPos = positions
+          ? new THREE.Vector3(
+              positions[agentIndex * 4],
+              positions[agentIndex * 4 + 1],
+              positions[agentIndex * 4 + 2],
+            )
+          : undefined;
+        this.controller.walkToPoi(agentIndex, poi.id, undefined, currentPos);
+      } else {
+        this.controller.play(agentIndex, 'sit_work');
+      }
+    } else {
+      this.controller.play(agentIndex, 'idle');
     }
   }
 

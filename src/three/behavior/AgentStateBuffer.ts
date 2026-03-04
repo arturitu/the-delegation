@@ -69,11 +69,9 @@ export class AgentStateBuffer {
     this.attribute.needsUpdate = true;
   }
 
-  /** Used when mode is IDLE to force a specific facing direction. */
+  /** Alias for setWaypoint — used when mode is IDLE to force a specific facing direction. */
   public setFacing(index: number, x: number, z: number): void {
-    this.array[index * 8 + 0] = x;
-    this.array[index * 8 + 2] = z;
-    this.attribute.needsUpdate = true;
+    this.setWaypoint(index, x, z);
   }
 
   public getWaypoint(index: number): { x: number; z: number } {

@@ -8,8 +8,20 @@ export interface ChatMessage {
   timestamp: string;
 }
 
+// ── Agent data ──────────────────────────────────────────────────
+export interface AgentData {
+  index: number;
+  department: string;
+  role: string;
+  expertise: string[];
+  mission: string;
+  personality: string;
+  isPlayer: boolean;
+  color: string;
+}
+
 // ── Store state (pure data + simple setters) ─────────────────
-export interface CharacterState {
+export interface UIState {
   isThinking: boolean;
   instanceCount: number;
   selectedNpcIndex: number | null;
@@ -22,6 +34,7 @@ export interface CharacterState {
   isTyping: boolean;
   chatMessages: ChatMessage[];
   inspectorTab: 'info' | 'chat';
+  isResizing: boolean;
 
   // BYOK LLM Configuration
   llmConfig: LLMConfig;
@@ -29,6 +42,7 @@ export interface CharacterState {
   setThinking: (isThinking: boolean) => void;
   setIsTyping: (isTyping: boolean) => void;
   setInspectorTab: (tab: 'info' | 'chat') => void;
+  setIsResizing: (isResizing: boolean) => void;
   setInstanceCount: (count: number) => void;
   setSelectedNpc: (index: number | null) => void;
   setSelectedPosition: (pos: { x: number; y: number } | null) => void;
@@ -153,7 +167,3 @@ export interface AtlasCoords {
   row: number;
 }
 
-export interface ExpressionConfig {
-  eyes: AtlasCoords;
-  mouth: AtlasCoords;
-}

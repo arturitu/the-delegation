@@ -19,8 +19,6 @@ const AgentView: React.FC<AgentViewProps> = ({ agentIndex }) => {
     addTask,
     updateTaskStatus,
     setTaskOutput,
-    setPendingApproval,
-    pendingApprovalTaskId
   } = useAgencyStore();
 
   const agent = AGENTS[agentIndex];
@@ -29,14 +27,6 @@ const AgentView: React.FC<AgentViewProps> = ({ agentIndex }) => {
   const activeTask = tasks.find(
     (t) => t.assignedAgentIds.includes(agentIndex) && t.status === 'in_progress'
   ) ?? null;
-
-  const isApprovalAgent =
-    pendingApprovalTaskId != null &&
-    tasks.some(
-      (t) =>
-        t.id === pendingApprovalTaskId &&
-        t.assignedAgentIds.includes(agentIndex),
-    );
 
   const handleStartChat = () => {
     scene?.startChat(agentIndex);
@@ -115,13 +105,9 @@ const AgentView: React.FC<AgentViewProps> = ({ agentIndex }) => {
         ) : canChat ? (
           <button
             onClick={handleStartChat}
-            className={`w-full py-3 text-white rounded-xl text-xs font-black uppercase tracking-widest active:scale-[0.98] transition-all shadow-lg pointer-events-auto cursor-pointer ${
-              isApprovalAgent
-                ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200'
-                : 'bg-zinc-900 hover:bg-black shadow-zinc-200'
-            }`}
+            className="w-full py-3 text-white rounded-xl text-xs font-black uppercase tracking-widest active:scale-[0.98] transition-all shadow-lg pointer-events-auto cursor-pointer bg-zinc-900 hover:bg-black shadow-zinc-200"
           >
-            {isApprovalAgent ? 'Review Approval' : 'Start Chat'}
+            Start Chat
           </button>
         ) : (
           <div className="flex flex-col gap-1.5">
@@ -148,7 +134,6 @@ const AgentView: React.FC<AgentViewProps> = ({ agentIndex }) => {
                   description: "Manually triggered work",
                   assignedAgentIds: [agentIndex],
                   status: 'scheduled',
-                  requiresClientApproval: false,
                 });
               }}
               className="px-2 py-1 bg-zinc-50 text-zinc-500 border border-zinc-200 text-[8px] font-bold rounded uppercase hover:bg-zinc-100 transition-colors"
@@ -167,16 +152,7 @@ const AgentView: React.FC<AgentViewProps> = ({ agentIndex }) => {
                 >
                   Set Done
                 </button>
-                <button
-                  onClick={() => {
-                    updateTaskStatus(activeTask.id, 'on_hold');
-                    setPendingApproval(activeTask.id);
-                    scene?.setNpcWorking(agentIndex, false);
-                  }}
-                  className="px-2 py-1 bg-orange-50 text-orange-600 border border-orange-100 text-[8px] font-bold rounded uppercase hover:bg-orange-100 transition-colors"
-                >
-                  Req Approval
-                </button>
+
               </>
             )}
           </div>

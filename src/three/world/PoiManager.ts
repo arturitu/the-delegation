@@ -67,16 +67,6 @@ export class PoiManager {
     );
   }
 
-  /** Returns a random free POI matching the given prefix. */
-  public getRandomFreePoi(prefix?: string): PoiDef | null {
-    const candidates = prefix
-      ? this.getFreePoisByPrefix(prefix)
-      : Array.from(this.pois.values()).filter(p => p.occupiedBy === null);
-
-    if (candidates.length === 0) return null;
-    return candidates[Math.floor(Math.random() * candidates.length)];
-  }
-
   /** Returns a random point near a POI (for area wandering). */
   public getRandomPointNearPoi(poiId: string, radius: number): THREE.Vector3 | null {
     const poi = this.pois.get(poiId);
@@ -91,30 +81,7 @@ export class PoiManager {
     );
   }
 
-  /** Returns the nearest free POI of a given arrival state to a world position, or null. */
-  public getNearestFreePoi(
-    arrivalState: CharacterStateKey,
-    from: THREE.Vector3,
-  ): PoiDef | null {
-    const candidates = this.getFreePois(arrivalState);
-    if (candidates.length === 0) return null;
-
-    let nearest: PoiDef | null = null;
-    let nearestDist2 = Infinity;
-
-    for (const poi of candidates) {
-      const dx = poi.position.x - from.x;
-      const dz = poi.position.z - from.z;
-      const d2 = dx * dx + dz * dz;
-      if (d2 < nearestDist2) {
-        nearestDist2 = d2;
-        nearest = poi;
-      }
-    }
-    return nearest;
-  }
-
-  // ── Future: GLB loading ─────────────────────────────────────
+  // ── GLB loading ─────────────────────────────────────
 
   /**
    * Extract POIs from a loaded GLB scene.

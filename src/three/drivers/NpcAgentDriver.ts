@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { IAgentDriver } from '../../types';
 import { CharacterController } from '../CharacterController';
-import { AgentData } from '../../data/agents';
+import { AgentData } from '../../types';
 import { useAgencyStore } from '../../store/agencyStore';
 import { useStore } from '../../store/useStore';
 
@@ -43,10 +43,10 @@ export class NpcAgentDriver implements IAgentDriver {
       return;
     }
 
-    // If the agent is currently "working" or "on hold" (waiting for approval)
-    // according to the agency system, we let the agency system control its main animation state.
+    // If the agent is currently "working" according to the agency system,
+    // we let the agency system control its main animation state.
     const isBusyWithAgency = agencyState.tasks.some(
-      t => t.assignedAgentIds.includes(this.agentIndex) && (t.status === 'in_progress' || t.status === 'on_hold')
+      t => t.assignedAgentIds.includes(this.agentIndex) && t.status === 'in_progress'
     );
 
     // Detect busy→idle transition: kick the agent to move away immediately

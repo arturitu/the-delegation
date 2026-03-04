@@ -34,11 +34,9 @@ const waitForResume = () => {
 export async function callAgent(params: {
   agentIndex: number;
   userMessage: string;
-  isBoardroom?: boolean;
-  boardroomTaskId?: string;
   chatMode?: boolean;
 }): Promise<AgentResponse> {
-  const { agentIndex, userMessage, isBoardroom = false, boardroomTaskId, chatMode = false } = params;
+  const { agentIndex, userMessage, chatMode = false } = params;
   const llmConfig = useStore.getState().llmConfig;
   const provider = LLMFactory.getProvider(llmConfig);
   const agentData = AGENTS.find(a => a.index === agentIndex);
@@ -46,7 +44,7 @@ export async function callAgent(params: {
   // 1. Build context
   const systemInstruction = chatMode
     ? buildChatSystemPrompt(agentIndex)
-    : buildSystemPrompt(agentIndex, isBoardroom);
+    : buildSystemPrompt(agentIndex);
 
   const store = useAgencyStore.getState();
   const currentTask = store.tasks.find(
@@ -64,9 +62,7 @@ export async function callAgent(params: {
     : `${dynamicContext}\n\n---\nMESSAGE:\n${userMessage}`;
 
   // 2. Get history from store
-  const history = isBoardroom && boardroomTaskId
-    ? (store.boardroomHistories[boardroomTaskId] || [])
-    : (store.agentHistories[agentIndex] || []);
+  const history = store.agentHistories[agentIndex] || [];
 
   const messages: LLMMessage[] = [
     ...history,
@@ -83,7 +79,7 @@ export async function callAgent(params: {
       messages,
       rawContent: userMessage,
       status: 'pending',
-      taskId: boardroomTaskId || currentTask?.id
+      taskId: currentTask?.id
   });
   // PAUSE BEFORE CALL (only when debug mode on)
   if (useAgencyStore.getState().pauseOnCall) {
@@ -117,7 +113,7 @@ export async function callAgent(params: {
       messages,
       rawContent: JSON.stringify({ text, toolCalls }, null, 2),
       status: 'completed',
-      taskId: boardroomTaskId || currentTask?.id
+      taskId: currentTask?.id
   });
   // PAUSE AFTER RESPONSE (only when debug mode on)
   if (useAgencyStore.getState().pauseOnCall) {
@@ -137,23 +133,12 @@ export async function callAgent(params: {
     }
   ];
 
-  useAgencyStore.setState((s) => {
-    if (isBoardroom && boardroomTaskId) {
-      return {
-        boardroomHistories: {
-          ...s.boardroomHistories,
-          [boardroomTaskId]: [...(s.boardroomHistories[boardroomTaskId] || []), ...newMessages]
-        }
-      }
-    } else {
-      return {
-        agentHistories: {
-          ...s.agentHistories,
-          [agentIndex]: [...(s.agentHistories[agentIndex] || []), ...newMessages]
-        }
-      }
+  useAgencyStore.setState((s) => ({
+    agentHistories: {
+      ...s.agentHistories,
+      [agentIndex]: [...(s.agentHistories[agentIndex] || []), ...newMessages]
     }
-  });
+  }));
 
   return { text, functionCalls };
 }
@@ -163,10 +148,3 @@ export async function callAgent(params: {
 /** Call the Account Manager (index 1) */
 export const callAccountManager = (userMessage: string) =>
   callAgent({ agentIndex: 1, userMessage })
-
-/** Call an agent in the context of a boardroom session for a given task */
-export const callBoardroomAgent = (
-  agentIndex: number,
-  taskId: string,
-  message: string
-) => callAgent({ agentIndex, userMessage: message, isBoardroom: true, boardroomTaskId: taskId })

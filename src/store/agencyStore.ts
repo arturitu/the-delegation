@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { LLMMessage } from '../services/llm/types'
 
-export type TaskStatus = 'scheduled' | 'on_hold' | 'in_progress' | 'done'
+export type TaskStatus = 'scheduled' | 'in_progress' | 'done'
 
 export interface Task {
   id: string
@@ -11,7 +11,6 @@ export interface Task {
   assignedAgentIds: number[]
   status: TaskStatus
   parentTaskId?: string
-  requiresClientApproval: boolean
   output?: string
   createdAt: number
   updatedAt: number
@@ -39,7 +38,7 @@ export interface DebugLogEntry {
   taskId?: string
 }
 
-export type ProjectPhase = 'idle' | 'briefing' | 'working' | 'awaiting_approval' | 'done'
+export type ProjectPhase = 'idle' | 'briefing' | 'working' | 'done'
 
 interface AgencyState {
   // ── Project ──────────────────────────────────────────────────
@@ -54,17 +53,14 @@ interface AgencyState {
   actionLog: ActionLogEntry[]
   debugLog: DebugLogEntry[]
 
-  // ── Conversation histories (Agnostic standard) ───────────────
+  // ── Conversation histories ─────────────────────────────
   agentHistories: Record<number, LLMMessage[]>
-  boardroomHistories: Record<string, LLMMessage[]>
 
   // ── UI ───────────────────────────────────────────────────────
   isKanbanOpen: boolean
   isLogOpen: boolean
   isFinalOutputOpen: boolean;
-  pendingApprovalTaskId: string | null;
   logFilterAgentIndex: number | null;
-  isResizing: boolean;
   isPaused: boolean;
   pauseOnCall: boolean;
 
@@ -82,21 +78,17 @@ interface AgencyState {
   addLogEntry: (entry: Omit<ActionLogEntry, 'id' | 'timestamp'>) => void;
   addDebugLogEntry: (entry: Omit<DebugLogEntry, 'id' | 'timestamp'>) => void;
 
-  // ── Actions — History ───────────────────────────────────────
-  appendAgentHistory: (agentIndex: number, role: 'user' | 'assistant', parts: any[]) => void;
-  appendBoardroomHistory: (taskId: string, role: 'user' | 'assistant', parts: any[]) => void;
-  clearAllHistories: () => void;
 
   // ── Actions — UI ──────────────────────────────────────────────
   setKanbanOpen: (open: boolean) => void;
   setLogOpen: (open: boolean, filterAgent?: number | null) => void;
   setFinalOutputOpen: (open: boolean) => void;
-  setPendingApproval: (taskId: string | null) => void;
-  setIsResizing: (isResizing: boolean) => void;
   togglePause: () => void;
   setPaused: (paused: boolean) => void;
   togglePauseOnCall: () => void;
 }
+
+const MAX_LOG_ENTRIES = 500;
 
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
 
@@ -110,13 +102,10 @@ export const useAgencyStore = create<AgencyState>()(
       actionLog: [],
       debugLog: [],
       agentHistories: {},
-      boardroomHistories: {},
       isKanbanOpen: true,
       isLogOpen: true,
       isFinalOutputOpen: false,
-      pendingApprovalTaskId: null,
       logFilterAgentIndex: null,
-      isResizing: false,
       isPaused: false,
       pauseOnCall: false,
 
@@ -151,57 +140,21 @@ export const useAgencyStore = create<AgencyState>()(
         })),
 
       addLogEntry: (entry) =>
-        set((s) => ({
-          actionLog: [
-            ...s.actionLog,
-            { ...entry, id: `log_${uid()}`, timestamp: Date.now() },
-          ],
-        })),
+        set((s) => {
+          const next = [...s.actionLog, { ...entry, id: `log_${uid()}`, timestamp: Date.now() }];
+          return { actionLog: next.length > MAX_LOG_ENTRIES ? next.slice(-MAX_LOG_ENTRIES) : next };
+        }),
 
       addDebugLogEntry: (entry) =>
-        set((s) => ({
-          debugLog: [
-            ...s.debugLog,
-            { ...entry, id: `debug_${uid()}`, timestamp: Date.now() },
-          ],
-        })),
-
-      appendAgentHistory: (agentIndex, role, parts) =>
-        set((s) => ({
-          agentHistories: {
-            ...s.agentHistories,
-            [agentIndex]: [
-              ...(s.agentHistories[agentIndex] ?? []),
-              {
-                role,
-                content: Array.isArray(parts) ? parts.map(p => typeof p === 'string' ? p : JSON.stringify(p)).join(' ') : String(parts),
-              },
-            ],
-          },
-        })),
-
-      appendBoardroomHistory: (taskId, role, parts) =>
-        set((s) => ({
-          boardroomHistories: {
-            ...s.boardroomHistories,
-            [taskId]: [
-              ...(s.boardroomHistories[taskId] ?? []),
-              {
-                role,
-                content: Array.isArray(parts) ? parts.map(p => typeof p === 'string' ? p : JSON.stringify(p)).join(' ') : String(parts),
-              },
-            ],
-          },
-        })),
-
-      clearAllHistories: () => set({ agentHistories: {}, boardroomHistories: {} }),
+        set((s) => {
+          const next = [...s.debugLog, { ...entry, id: `debug_${uid()}`, timestamp: Date.now() }];
+          return { debugLog: next.length > MAX_LOG_ENTRIES ? next.slice(-MAX_LOG_ENTRIES) : next };
+        }),
 
       setKanbanOpen: (open) => set({ isKanbanOpen: open }),
       setLogOpen: (open, filterAgent = null) =>
         set({ isLogOpen: open, logFilterAgentIndex: filterAgent ?? null }),
       setFinalOutputOpen: (open) => set({ isFinalOutputOpen: open }),
-      setPendingApproval: (taskId) => set({ pendingApprovalTaskId: taskId }),
-      setIsResizing: (resizing) => set({ isResizing: resizing }),
       togglePause: () => set((s) => ({ isPaused: !s.isPaused })),
       setPaused: (isPaused) => set({ isPaused }),
       togglePauseOnCall: () => set((s) => ({ pauseOnCall: !s.pauseOnCall })),

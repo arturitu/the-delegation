@@ -24,15 +24,9 @@ const teamList = AGENTS.filter((a) => !a.isPlayer)
   .join('\n')
 
 // ─── Build system prompt for a given agent ────────────────────
-export function buildSystemPrompt(agentIndex: number, isBoardroom = false): string {
+export function buildSystemPrompt(agentIndex: number): string {
   const agent = AGENTS.find(a => a.index === agentIndex)
   if (!agent) return ''
-
-  const boardroomNote = isBoardroom
-    ? `\nCONTEXT: You are in the BOARDROOM collaborating with other agents. ` +
-      `Divide the work clearly using propose_subtask, one per teammate. ` +
-      `Then each agent will execute their own sub-task independently.`
-    : ''
 
   return [
     `You are ${agent.role} at ${COMPANY_NAME}.`,
@@ -45,7 +39,6 @@ export function buildSystemPrompt(agentIndex: number, isBoardroom = false): stri
     `TEAM:\n${teamList}`,
     '',
     WORKFLOW_RULES,
-    boardroomNote,
   ]
     .join('\n')
     .trim()
@@ -56,7 +49,6 @@ export function buildDynamicContext(params: {
   clientBrief: string
   currentTask: Task | null
   taskBoardSummary: string
-  boardroomContext?: string
 }): string {
   const parts: string[] = [
     `CLIENT BRIEF:\n${params.clientBrief || 'Not yet defined.'}`,
@@ -69,23 +61,7 @@ export function buildDynamicContext(params: {
     )
   }
 
-  if (params.boardroomContext) {
-    parts.push(`BOARDROOM CONTEXT:\n${params.boardroomContext}`)
-  }
-
   return parts.join('\n\n')
-}
-
-// ─── Task board summary string ────────────────────────────────
-export function buildTaskBoardSummary(tasks: Task[]): string {
-  if (tasks.length === 0) return 'No tasks yet.'
-  return tasks
-    .map(
-      (t) =>
-        `[${t.id}] ${t.status.toUpperCase()} — ${t.description}` +
-        ` (agents: ${t.assignedAgentIds.join(', ')})`
-    )
-    .join('\n')
 }
 
 // ─── Conversational chat prompt (no tools, no workflow) ───────

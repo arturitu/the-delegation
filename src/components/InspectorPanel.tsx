@@ -6,15 +6,13 @@ import { useChatAvailability } from '../hooks/useChatAvailability';
 import AgentView from './AgentView';
 import ProjectView from './ProjectView';
 import ChatPanel from './ChatPanel';
-import { AGENTS } from '../data/agents';
+import { AGENTS, AM_INDEX } from '../data/agents';
 import { Info, MessageSquare, Lock } from 'lucide-react';
-
-const AM_INDEX = 1;
 
 const InspectorPanel: React.FC = () => {
   const { selectedNpcIndex, inspectorTab, setInspectorTab, isChatting } = useStore();
   const scene = useSceneManager();
-  const { phase, pendingApprovalTaskId, tasks } = useAgencyStore();
+  const { phase } = useAgencyStore();
   const { canChat, reason } = useChatAvailability(selectedNpcIndex);
   const prevCanChat = useRef(canChat);
 
@@ -27,15 +25,6 @@ const InspectorPanel: React.FC = () => {
     if (selectedNpcIndex === AM_INDEX && phase === 'done') {
       setInspectorTab('chat');
       return;
-    }
-
-    if (pendingApprovalTaskId && phase !== 'done') {
-      const approvalTask = tasks.find(t => t.id === pendingApprovalTaskId);
-      const approvalAgentIndex = approvalTask?.assignedAgentIds[0];
-      if (approvalAgentIndex !== undefined && selectedNpcIndex === approvalAgentIndex) {
-        setInspectorTab('chat');
-        scene?.startChat(selectedNpcIndex);
-      }
     }
   }, [selectedNpcIndex]);
 

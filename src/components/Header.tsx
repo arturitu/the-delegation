@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { useAgencyStore } from '../store/agencyStore';
-import { Maximize2, KeyRound, Info, Zap, ZapOff, Play } from 'lucide-react';
+import { Maximize2, KeyRound, Info, Zap, ZapOff } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import InfoModal from './InfoModal';
 import BYOKModal from './BYOKModal';

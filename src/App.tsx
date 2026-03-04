@@ -8,6 +8,7 @@ import { SceneManager } from './three/SceneManager';
 import { SceneContext } from './three/SceneContext';
 import { useAgencyOrchestrator } from './hooks/useAgencyOrchestrator';
 import { useAgencyStore } from './store/agencyStore';
+import { useStore } from './store/useStore';
 import Header from './components/Header';
 import InspectorPanel from './components/InspectorPanel';
 import { ActionLogPanel } from './components/ActionLogPanel';
@@ -25,7 +26,8 @@ const App: React.FC = () => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const managerRef = useRef<SceneManager | null>(null);
   const [sceneManager, setSceneManager] = useState<SceneManager | null>(null);
-  const { isLogOpen, isKanbanOpen, setIsResizing } = useAgencyStore();
+  const { isLogOpen, isKanbanOpen } = useAgencyStore();
+  const { setIsResizing } = useStore();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [kanbanHeight, setKanbanHeight] = useState(320);
@@ -39,7 +41,7 @@ const App: React.FC = () => {
   }, [setIsResizing]);
 
   const resize = useCallback((e: MouseEvent) => {
-    if (useAgencyStore.getState().isResizing) {
+    if (useStore.getState().isResizing) {
       const windowHeight = window.innerHeight;
       const newHeight = windowHeight - e.clientY;
       const minHeight = windowHeight * 0.3;
@@ -93,7 +95,7 @@ const App: React.FC = () => {
             {/* Resize Bar */}
             {isKanbanOpen && !isFullscreen && (
               <div
-                className={`h-2 hover:h-2 bg-transparent hover:bg-zinc-200 border-t border-black/5 transition-colors cursor-row-resize z-30 flex items-center justify-center group shrink-0 ${useAgencyStore.getState().isResizing ? 'bg-zinc-300' : ''}`}
+                className={`h-2 hover:h-2 bg-transparent hover:bg-zinc-200 border-t border-black/5 transition-colors cursor-row-resize z-30 flex items-center justify-center group shrink-0 ${useStore.getState().isResizing ? 'bg-zinc-300' : ''}`}
                 onMouseDown={startResizing}
               >
                 <div className="w-12 h-1 bg-zinc-300 rounded-full group-hover:bg-zinc-400" />

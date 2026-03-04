@@ -7,8 +7,6 @@ interface BYOKModalProps {
   onClose: () => void;
 }
 
-const STORAGE_KEY = 'byok-config';
-
 const PROVIDERS = [
   { id: 'gemini', label: 'Gemini', model: 'gemini-3-flash-preview', enabled: true },
   { id: 'openai', label: 'OpenAI', model: 'gpt-4o', enabled: false },
@@ -30,9 +28,6 @@ const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
       model: provider.model,
     };
     setLlmConfig(config);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-    } catch {}
     onClose();
   };
 
@@ -45,9 +40,6 @@ const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
     };
     setApiKey('');
     setLlmConfig(emptyConfig);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(emptyConfig));
-    } catch {}
   };
 
   const isSaved = !!llmConfig.apiKey;
