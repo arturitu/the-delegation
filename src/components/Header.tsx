@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { Maximize2, Key, Info } from 'lucide-react';
+import { useAgencyStore } from '../store/agencyStore';
+import { Maximize2, KeyRound, Info, Zap, ZapOff, Play } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import InfoModal from './InfoModal';
 import BYOKModal from './BYOKModal';
 
 const Header: React.FC = () => {
   const { llmConfig } = useStore();
+  const { pauseOnCall, togglePauseOnCall, isPaused, setPaused } = useAgencyStore();
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isBYOKOpen, setIsBYOKOpen] = useState(false);
   const hasKey = !!llmConfig.apiKey;
@@ -36,10 +38,35 @@ const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Center: Main Title (Removed as requested) */}
-
       {/* Right: Global Controls */}
       <div className="flex items-center gap-4">
+        {/* Step/Resume Button (Visible when paused by auto-pause) */}
+        {isPaused && (
+          <button
+            onClick={() => setPaused(false)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-[11px] font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+            title="Resume Execution"
+          >
+            <Play size={14} fill="currentColor" />
+            <span>Resume</span>
+          </button>
+        )}
+
+        <button
+          onClick={togglePauseOnCall}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded text-[11px] font-bold uppercase tracking-wider transition-all border cursor-pointer ${
+            pauseOnCall
+              ? 'bg-amber-50 text-amber-600 border-amber-200'
+              : 'bg-zinc-50 text-zinc-400 border-zinc-100 hover:bg-zinc-100 hover:text-zinc-600'
+          }`}
+          title={pauseOnCall ? "Pause on AI Call: ON" : "Pause on AI Call: OFF"}
+        >
+          {pauseOnCall ? <Zap size={14} fill="currentColor" /> : <ZapOff size={14} />}
+          <span>{pauseOnCall ? 'Debug Mode ON' : 'Debug Mode'}</span>
+        </button>
+
+        <div className="w-[1px] h-4 bg-zinc-200 mx-1" />
+
         <button
           onClick={handleFullscreen}
           className="text-zinc-400 hover:text-zinc-900 transition-colors flex items-center gap-2"
@@ -52,7 +79,7 @@ const Header: React.FC = () => {
           className="relative text-zinc-400 hover:text-zinc-900 transition-colors flex items-center gap-2"
           title="API Key (BYOK)"
         >
-          <Key size={18} className={hasKey ? 'text-emerald-500 hover:text-emerald-600' : ''} />
+          <KeyRound size={18} className={hasKey ? 'text-emerald-500 hover:text-emerald-600' : ''} />
           {hasKey && (
             <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400" />
           )}

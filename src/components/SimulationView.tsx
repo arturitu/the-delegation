@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import UIOverlay from './UIOverlay';
 import { Play, Pause, Maximize2, Minimize2 } from 'lucide-react';
+import { useAgencyStore } from '../store/agencyStore';
 
 interface SimulationViewProps {
   canvasRef: React.RefObject<HTMLDivElement>;
@@ -9,7 +10,9 @@ interface SimulationViewProps {
 }
 
 const SimulationView: React.FC<SimulationViewProps> = ({ canvasRef, isFullscreen, setIsFullscreen }) => {
-  const [isPlaying, setIsPlaying] = useState(true);
+  const isPaused = useAgencyStore((s) => s.isPaused);
+  const setPaused = useAgencyStore((s) => s.setPaused);
+  const isPlaying = !isPaused;
 
   return (
     <div className="flex flex-col flex-1 min-w-0 min-h-0 relative">
@@ -22,7 +25,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ canvasRef, isFullscreen
         {/* Centered Controls */}
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setIsPlaying(true)}
+            onClick={() => setPaused(false)}
             disabled={isPlaying}
             className={`p-1 border rounded transition-all cursor-pointer ${
               isPlaying
@@ -33,7 +36,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ canvasRef, isFullscreen
             <Play size={14} fill={isPlaying ? "currentColor" : "none"} />
           </button>
           <button
-            onClick={() => setIsPlaying(false)}
+            onClick={() => setPaused(true)}
             disabled={!isPlaying}
             className={`p-1 border rounded transition-all cursor-pointer ${
               !isPlaying

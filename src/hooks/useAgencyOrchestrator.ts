@@ -8,7 +8,7 @@ import {
   type AgentFunctionCall,
 } from '../services/agencyService'
 import { ToolHandlerService } from '../services/toolHandlerService'
-import { AGENTS } from '../data/agents'
+import { getAgent } from '../data/agents'
 
 // ── Constants ─────────────────────────────────────────────────
 const AM_INDEX = 1 // Account Manager
@@ -176,7 +176,7 @@ export function useAgencyOrchestrator() {
           task.id,
           `Boardroom meeting for task [${task.id}]: "${task.description}". ` +
           `Client brief: "${store.clientBrief}". ` +
-          `Your teammates in this meeting: ${agents.filter((i) => i !== agentIndex).map((i) => AGENTS[i]?.role).join(', ')}. ` +
+          `Your teammates in this meeting: ${agents.filter((i) => i !== agentIndex).map((i) => getAgent(i)?.role).join(', ')}. ` +
           `Propose a subtask for yourself or delegate. Use propose_subtask.`,
         )
 
@@ -264,7 +264,7 @@ export function useAgencyOrchestrator() {
         store.updateTaskStatus(task.id, 'in_progress')
         store.addLogEntry({
           agentIndex: 0,
-          action: `approved task — resuming work`,
+          action: `approved task for ${getAgent(npcIndex)?.role} — resuming work`,
           taskId: task.id,
         })
 
@@ -281,10 +281,10 @@ export function useAgencyOrchestrator() {
           // Restart the work loop for this agent
           sceneRef.current?.setNpcWorking(npcIndex, true)
 
-          // Reflection / Dreaming phase
+          // Reflection / Designing phase - use the response pattern instead of hardcoded strings
           await callAgent({
             agentIndex: npcIndex,
-            userMessage: `Client responded: "${text}". Draft a updated version of your prompt taking this feedback into account. Identify any new challenges.`,
+            userMessage: `Client responded: "${text}". Draft an updated version of your result taking this feedback into account.`,
           })
 
           const status = useAgencyStore.getState().tasks.find((t) => t.id === task.id)?.status

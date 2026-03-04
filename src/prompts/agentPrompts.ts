@@ -19,13 +19,13 @@ WORKFLOW RULES:
 `.trim()
 
 // ─── Team roster visible to all agents ────────────────────────
-const TEAM_ROSTER = AGENTS.filter((a) => !a.isPlayer)
-  .map((a) => `  [${a.index}] ${a.role} (${a.department}) — ${a.mission}`)
+const teamList = AGENTS.filter((a) => !a.isPlayer)
+  .map((a) => `  [ID: ${a.index}] ${a.role} (${a.department}) — ${a.mission}`)
   .join('\n')
 
 // ─── Build system prompt for a given agent ────────────────────
 export function buildSystemPrompt(agentIndex: number, isBoardroom = false): string {
-  const agent = AGENTS[agentIndex]
+  const agent = AGENTS.find(a => a.index === agentIndex)
   if (!agent) return ''
 
   const boardroomNote = isBoardroom
@@ -42,7 +42,7 @@ export function buildSystemPrompt(agentIndex: number, isBoardroom = false): stri
     '',
     SCOPE_CONSTRAINT,
     '',
-    `TEAM:\n${TEAM_ROSTER}`,
+    `TEAM:\n${teamList}`,
     '',
     WORKFLOW_RULES,
     boardroomNote,

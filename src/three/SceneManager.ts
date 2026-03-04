@@ -80,9 +80,10 @@ export class SceneManager {
     this.driverManager = new DriverManager(this.controller);
     const playerDriver = this.driverManager.registerPlayer();
 
-    for (let i = NPC_START_INDEX; i < AGENTS.length; i++) {
-      this.driverManager.registerNpc(i, AGENTS[i]);
-    }
+    AGENTS.forEach((agent) => {
+      if (agent.isPlayer) return;
+      this.driverManager.registerNpc(agent.index, agent);
+    });
 
     // InputManager — callbacks feed into PlayerInputDriver or store
     new InputManager(
@@ -189,6 +190,28 @@ export class SceneManager {
       const fz = p[npcIndex * 4 + 2] - p[PLAYER_INDEX * 4 + 2];
       this.controller!.getAgentStateBuffer()?.setWaypoint(PLAYER_INDEX, fx, fz);
       this.controller!.getAgentStateBuffer()?.setWaypoint(npcIndex, -fx, -fz);
+
+      // --- New: Pre-fill Chat if agent has pending approval ---
+      const agencyStore = useAgencyStore.getState();
+      const pendingTaskId = agencyStore.pendingApprovalTaskId;
+      const task = pendingTaskId ? agencyStore.tasks.find(t => t.id === pendingTaskId && t.assignedAgentIds.includes(npcIndex)) : null;
+
+      if (task) {
+        // Find the log entry for the approval request to get the question
+        const approvalLog = agencyStore.actionLog.find(l => l.taskId === task.id && l.action.toLowerCase().includes('approval'));
+        const question = approvalLog ? approvalLog.action.replace(/^requested client approval — "/, '').replace(/"$/, '') : null;
+
+        if (question) {
+          const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const approvalMsg: ChatMessage = {
+            role: 'assistant',
+            text: `I've paused my work because I need your input: "${question}"\n\nHow should I proceed?`,
+            timestamp
+          };
+          useStore.setState({ chatMessages: [approvalMsg] });
+          return; // Skip default greeting
+        }
+      }
 
       this._triggerNpcGreeting(npcIndex);
     });
@@ -316,7 +339,8 @@ export class SceneManager {
   // ── Private helpers ──────────────────────────────────────────
 
   private async _triggerNpcGreeting(npcIndex: number): Promise<void> {
-    const agent = AGENTS[npcIndex];
+    const agent = AGENTS.find(a => a.index === npcIndex);
+    if (!agent) return;
     useStore.setState({ isThinking: true });
     try {
       // Simplified operational greeting
@@ -351,6 +375,14 @@ export class SceneManager {
 
   private animate() {
     this.engine.timer.update();
+    const isPaused = useAgencyStore.getState().isPaused;
+
+    // When paused, we bypass the entire update/render logic
+    if (isPaused) {
+      this.engine.renderer.render(this.stage.scene, this.stage.camera);
+      return;
+    }
+
     const delta = this.engine.timer.getDelta();
 
     this.stage.update();

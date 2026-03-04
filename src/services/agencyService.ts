@@ -7,6 +7,7 @@ import {
 import { LLMFactory } from './llm/LLMFactory'
 import { LLMMessage } from './llm/types'
 import { AGENCY_TOOLS } from './llm/toolDefinitions'
+import { AGENTS } from '../data/agents'
 
 export interface AgentFunctionCall {
   name: string
@@ -18,6 +19,17 @@ export interface AgentResponse {
   functionCalls: AgentFunctionCall[]
 }
 
+const waitForResume = () => {
+    return new Promise<void>((resolve) => {
+      const unsub = useAgencyStore.subscribe((state, prevState) => {
+        if (prevState.isPaused && !state.isPaused) {
+          unsub();
+          resolve();
+        }
+      });
+    });
+  };
+
 export async function callAgent(params: {
   agentIndex: number;
   userMessage: string;
@@ -27,6 +39,7 @@ export async function callAgent(params: {
   const { agentIndex, userMessage, isBoardroom = false, boardroomTaskId } = params;
   const llmConfig = useStore.getState().llmConfig;
   const provider = LLMFactory.getProvider(llmConfig);
+  const agentData = AGENTS.find(a => a.index === agentIndex);
 
   // 1. Build context
   const systemInstruction = buildSystemPrompt(agentIndex, isBoardroom);
@@ -54,6 +67,23 @@ export async function callAgent(params: {
     { role: 'user', content: fullUserMessage }
   ];
 
+  // PAUSE BEFORE CALL (OPTIONAL)
+  if (useAgencyStore.getState().pauseOnCall) {
+    useAgencyStore.getState().addDebugLogEntry({
+        agentIndex,
+        agentName: agentData?.role || 'Unknown',
+        phase: 'request',
+        systemPrompt: systemInstruction,
+        dynamicContext,
+        messages,
+        rawContent: userMessage,
+        status: 'pending',
+        taskId: boardroomTaskId || currentTask?.id
+    });
+    useAgencyStore.getState().setPaused(true);
+    await waitForResume();
+  }
+
   // 3. Call LLM
   const response = await provider.generateCompletion(
     messages,
@@ -63,10 +93,28 @@ export async function callAgent(params: {
   );
 
   const text = response.content || '';
-  const functionCalls = (response.tool_calls || []).map(tc => ({
+  const toolCalls = response.tool_calls || [];
+  const functionCalls = toolCalls.map(tc => ({
     name: tc.function.name,
     args: JSON.parse(tc.function.arguments)
   }));
+
+  // PAUSE AFTER RESPONSE (OPTIONAL)
+  if (useAgencyStore.getState().pauseOnCall) {
+    useAgencyStore.getState().addDebugLogEntry({
+        agentIndex,
+        agentName: agentData?.role || 'Unknown',
+        phase: 'response',
+        systemPrompt: systemInstruction,
+        dynamicContext,
+        messages,
+        rawContent: JSON.stringify({ text, toolCalls }, null, 2),
+        status: 'completed',
+        taskId: boardroomTaskId || currentTask?.id
+    });
+    useAgencyStore.getState().setPaused(true);
+    await waitForResume();
+  }
 
   // 4. Update history in store
   const newMessages: LLMMessage[] = [

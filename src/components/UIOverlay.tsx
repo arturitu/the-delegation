@@ -26,8 +26,8 @@ const UIOverlay: React.FC = () => {
 
   const AM_INDEX = 1; // Account Manager index
 
-  const selectedAgent = selectedNpcIndex != null ? AGENTS[selectedNpcIndex] ?? null : null;
-  const hoveredAgent = hoveredNpcIndex != null ? AGENTS[hoveredNpcIndex] ?? null : null;
+  const selectedAgent = selectedNpcIndex != null ? AGENTS.find(a => a.index === selectedNpcIndex) ?? null : null;
+  const hoveredAgent = hoveredNpcIndex != null ? AGENTS.find(a => a.index === hoveredNpcIndex) ?? null : null;
 
   return (
     <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">

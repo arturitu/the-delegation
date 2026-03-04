@@ -32,9 +32,14 @@ export class ToolHandlerService {
           status: 'scheduled',
           requiresClientApproval: requiresApproval ?? false,
         });
+
+        const assignedRoles = agentIds
+          .map(i => AGENTS.find(a => a.index === i)?.role || `Agent #${i}`)
+          .join(', ');
+
         store.addLogEntry({
           agentIndex: callerIndex,
-          action: `proposed task "${title || description}" → assigned to ${agentIds.map(i => AGENTS[i]?.role).join(', ')}`,
+          action: `proposed task "${title || description}" → assigned to ${assignedRoles}`,
           taskId: task.id,
         });
         // Transition to working phase on first task creation
@@ -66,6 +71,10 @@ export class ToolHandlerService {
           taskId,
         });
         scene?.setNpcWorking(callerIndex, false);
+        // Move agent to boardroom and stop working
+        if (scene && 'moveNpcToBoardroom' in scene) {
+          (scene as any).moveNpcToBoardroom(callerIndex);
+        }
         return true;
       }
 
@@ -95,9 +104,12 @@ export class ToolHandlerService {
           requiresClientApproval: false,
           parentTaskId: parentTask?.id,
         });
+
+        const agentRole = AGENTS.find(a => a.index === agentId)?.role || `Agent #${agentId}`;
+
         store.addLogEntry({
           agentIndex: callerIndex,
-          action: `proposed subtask for ${AGENTS[agentId]?.role} — "${title || description}"`,
+          action: `proposed subtask for ${agentRole} — "${title || description}"`,
           taskId: sub.id,
         });
         return true;

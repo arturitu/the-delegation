@@ -15,7 +15,7 @@ interface KanbanPanelProps {
 }
 
 function renderAgentTag(agentIndex: number) {
-  const agent = AGENTS[agentIndex]
+  const agent = AGENTS.find(a => a.index === agentIndex)
   if (!agent) return null
   return (
     <span key={agentIndex} className="flex items-center gap-1 text-[10px] text-zinc-500">
