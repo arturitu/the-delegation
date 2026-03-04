@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, FunctionDeclaration, Tool } from '@google/genai';
-import { LLMProvider, LLMMessage, LLMRole, LLMToolDefinition, LLMResponse, LLMToolCall } from '../types';
+import { LLMProvider, LLMMessage, LLMToolDefinition, LLMResponse, LLMToolCall } from '../types';
 
 export class GeminiProvider implements LLMProvider {
   private client: GoogleGenAI;

@@ -61,7 +61,6 @@ export class CharacterStateMachine {
   /** Request a state transition. Non-interruptible states silently reject new requests. */
   public transition(index: number, newState: CharacterStateKey, driver: ICharacterDriver): void {
     const currentDef = STATE_MAP[this.currentState[index]];
-    const newDef = STATE_MAP[newState];
 
     // If current state is NOT interruptible, we can only transition if:
     // 1. The new state is ALSO non-interruptible (allows immediate override of busy states if logic requires)

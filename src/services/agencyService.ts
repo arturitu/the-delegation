@@ -1,12 +1,11 @@
 import { useAgencyStore } from '../store/agencyStore'
 import { useStore } from '../store/useStore'
-import { AGENTS } from '../data/agents'
 import {
   buildSystemPrompt,
   buildDynamicContext,
 } from '../prompts/agentPrompts'
 import { LLMFactory } from './llm/LLMFactory'
-import { LLMMessage, LLMRole } from './llm/types'
+import { LLMMessage } from './llm/types'
 import { AGENCY_TOOLS } from './llm/toolDefinitions'
 
 export interface AgentFunctionCall {
@@ -28,7 +27,6 @@ export async function callAgent(params: {
   const { agentIndex, userMessage, isBoardroom = false, boardroomTaskId } = params;
   const llmConfig = useStore.getState().llmConfig;
   const provider = LLMFactory.getProvider(llmConfig);
-  const agent = AGENTS[agentIndex];
 
   // 1. Build context
   const systemInstruction = buildSystemPrompt(agentIndex, isBoardroom);
@@ -47,7 +45,6 @@ export async function callAgent(params: {
   const fullUserMessage = `${dynamicContext}\n\n---\nMESSAGE:\n${userMessage}`;
 
   // 2. Get history from store
-  const historyKey = isBoardroom && boardroomTaskId ? boardroomTaskId : agentIndex;
   const history = isBoardroom && boardroomTaskId
     ? (store.boardroomHistories[boardroomTaskId] || [])
     : (store.agentHistories[agentIndex] || []);

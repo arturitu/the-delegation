@@ -24,7 +24,6 @@ export class SceneManager {
   private poiManager: PoiManager;
   private worldManager: WorldManager;
   private driverManager: DriverManager | null = null;
-  private inputManager: InputManager | null = null;
 
   // Track which NPC is selected for camera follow
   private selectedIndex: number | null = null;
@@ -86,7 +85,7 @@ export class SceneManager {
     }
 
     // InputManager — callbacks feed into PlayerInputDriver or store
-    this.inputManager = new InputManager(
+    new InputManager(
       this.engine.renderer.domElement,
       this.stage.camera,
       () => this.controller!.getCPUPositions(),
@@ -222,7 +221,6 @@ export class SceneManager {
     if (state.selectedNpcIndex === null || state.isThinking) return;
 
     const npcIndex = state.selectedNpcIndex;
-    const agent = AGENTS[npcIndex];
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMsg: ChatMessage = { role: 'user', text, timestamp };
 

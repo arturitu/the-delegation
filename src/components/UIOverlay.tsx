@@ -8,24 +8,17 @@ import { useAgencyStore } from '../store/agencyStore';
 
 const UIOverlay: React.FC = () => {
   const {
-    isThinking,
     selectedNpcIndex,
     selectedPosition,
     hoveredNpcIndex,
     hoveredPoiLabel,
-    hoverPosition,
-    isChatting
+    hoverPosition
   } = useStore();
   const scene = useSceneManager();
   const [isHelpOpen, setHelpOpen] = useState(false);
   const {
     tasks,
-    actionLog,
-    isKanbanOpen,
-    isLogOpen,
     isFinalOutputOpen,
-    setKanbanOpen,
-    setLogOpen,
     setFinalOutputOpen,
     pendingApprovalTaskId,
     phase,
@@ -33,29 +26,8 @@ const UIOverlay: React.FC = () => {
 
   const AM_INDEX = 1; // Account Manager index
 
-  const activeTasks = tasks.filter((t) => t.status !== 'done');
-  const selectedAgentActiveTask =
-    selectedNpcIndex != null
-      ? tasks.find(
-          (t) =>
-            t.assignedAgentIds.includes(selectedNpcIndex) &&
-            t.status === 'in_progress'
-        ) ?? null
-      : null;
-
   const selectedAgent = selectedNpcIndex != null ? AGENTS[selectedNpcIndex] ?? null : null;
   const hoveredAgent = hoveredNpcIndex != null ? AGENTS[hoveredNpcIndex] ?? null : null;
-
-  const handleStartChat = () => {
-    if (selectedNpcIndex !== null) {
-      scene?.startChat(selectedNpcIndex);
-    }
-  };
-
-  const handleEndChat = () => {
-    scene?.endChat();
-  };
-
 
   return (
     <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">

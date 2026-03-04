@@ -13,7 +13,6 @@ import {
   mat4,
   uint,
   If,
-  Loop,
   uniform,
   atan,
   attribute,

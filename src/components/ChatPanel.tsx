@@ -90,7 +90,7 @@ const ChatPanel: React.FC = () => {
               <div className={`flex items-start gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} max-w-[90%]`}>
                 {/* Avatar / Icon */}
                 <div className="shrink-0 mt-1">
-                  {msg.role === 'model' ? (
+                  {msg.role === 'assistant' ? (
                     <div className="w-5 h-5 text-zinc-400">
                       <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2L14.85 9.15L22 12L14.85 14.85L12 22L9.15 14.85L2 12L9.15 9.15L12 2Z" />

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useAgencyStore } from '../store/agencyStore';
 import { useStore } from '../store/useStore';
 import { Maximize2, Key, Info } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
@@ -7,7 +6,6 @@ import InfoModal from './InfoModal';
 import BYOKModal from './BYOKModal';
 
 const Header: React.FC = () => {
-  const { phase } = useAgencyStore();
   const { llmConfig } = useStore();
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isBYOKOpen, setIsBYOKOpen] = useState(false);

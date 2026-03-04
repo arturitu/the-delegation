@@ -27,8 +27,6 @@ export function ActionLogPanel() {
       ? actionLog.filter((e) => e.agentIndex === logFilterAgentIndex).reverse()
       : [...actionLog].reverse()
 
-  const accentColor = filterAgent?.color ?? '#e4e4e7'
-
   return (
     <div className="w-[320px] h-full bg-white border-r border-zinc-100 flex flex-col pointer-events-auto overflow-hidden shrink-0 relative">
           {/* Header */}

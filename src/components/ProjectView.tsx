@@ -1,19 +1,16 @@
 import React from 'react';
 import { useAgencyStore } from '../store/agencyStore';
-import { LayoutDashboard, ScrollText, CheckCircle2, PlayCircle } from 'lucide-react';
+import { ScrollText } from 'lucide-react';
 
 const ProjectView: React.FC = () => {
   const {
     clientBrief,
     phase,
-    tasks,
-    setKanbanOpen,
-    setLogOpen
+    tasks
   } = useAgencyStore();
 
   const activeTasks = tasks.filter(t => t.status === 'in_progress');
   const doneTasks = tasks.filter(t => t.status === 'done');
-  const pendingTasks = tasks.filter(t => t.status === 'scheduled' || t.status === 'on_hold');
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-6 bg-white/50">

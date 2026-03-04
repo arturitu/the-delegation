@@ -6,9 +6,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { SceneManager } from './three/SceneManager';
 import { SceneContext } from './three/SceneContext';
-import UIOverlay from './components/UIOverlay';
 import { useAgencyOrchestrator } from './hooks/useAgencyOrchestrator';
-import { useStore } from './store/useStore';
 import { useAgencyStore } from './store/agencyStore';
 import Header from './components/Header';
 import InspectorPanel from './components/InspectorPanel';
@@ -27,7 +25,6 @@ const App: React.FC = () => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const managerRef = useRef<SceneManager | null>(null);
   const [sceneManager, setSceneManager] = useState<SceneManager | null>(null);
-  const { isChatting } = useStore();
   const { isLogOpen, isKanbanOpen, setIsResizing } = useAgencyStore();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
