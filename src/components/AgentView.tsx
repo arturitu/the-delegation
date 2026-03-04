@@ -110,13 +110,6 @@ const AgentView: React.FC<AgentViewProps> = ({ agentIndex }) => {
           </button>
         )}
 
-        <button
-          onClick={() => setLogOpen(true, agentIndex)}
-          className="w-full py-3 bg-white text-zinc-600 border border-zinc-200 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-50 hover:text-zinc-900 active:scale-[0.98] transition-all pointer-events-auto cursor-pointer"
-        >
-          Action Log
-        </button>
-
         {/* Debug Controls */}
         <div className="mt-4 border-t border-zinc-100 pt-4">
           <p className="text-[8px] font-black text-zinc-300 uppercase mb-2 tracking-tighter">Debug Simulation</p>

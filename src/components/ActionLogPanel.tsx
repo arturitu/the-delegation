@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useAgencyStore, DebugLogEntry } from '../store/agencyStore'
 import { AGENTS } from '../data/agents'
-import { ChevronDown, ChevronRight, MessageSquare, Terminal, Eye, Zap, Copy, Check, Download } from 'lucide-react'
+import { ChevronDown, ChevronRight, MessageSquare, Terminal, Eye, Zap, Copy, Check, Download, Filter } from 'lucide-react'
 
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString('en-GB', {
@@ -254,6 +254,7 @@ ${entry.rawContent}
 export function ActionLogPanel() {
   const { setLogOpen, actionLog, debugLog, logFilterAgentIndex, phase, setFinalOutputOpen } = useAgencyStore()
   const [activeTab, setActiveTab] = useState<'activity' | 'technical'>('activity')
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false)
   const topRef = useRef<HTMLDivElement>(null)
 
   const handleDownloadAll = () => {
@@ -315,7 +316,7 @@ ${entry.rawContent}
               <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Logs</span>
               {filterAgent && (
                 <div
-                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold text-white uppercase tracking-tighter"
+                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold text-white uppercase tracking-tighter animate-in fade-in zoom-in duration-200"
                   style={{ backgroundColor: filterAgent.color }}
                 >
                   {filterAgent.role}
@@ -328,15 +329,74 @@ ${entry.rawContent}
                 </div>
               )}
             </div>
-            {activeTab === 'technical' && debugEntries.length > 0 && (
-              <button
-                onClick={handleDownloadAll}
-                className="text-zinc-400 hover:text-zinc-900 transition-colors p-1 rounded hover:bg-zinc-50 cursor-pointer"
-                title="Download all as .txt"
-              >
-                <Download size={14} />
-              </button>
-            )}
+            
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <button
+                  onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+                  className={`p-1.5 rounded transition-colors cursor-pointer ${
+                    isFilterMenuOpen || logFilterAgentIndex !== null 
+                      ? 'bg-zinc-900 text-white' 
+                      : 'text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50'
+                  }`}
+                  title="Filter by agent"
+                >
+                  <Filter size={14} />
+                </button>
+
+                {isFilterMenuOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-20" 
+                      onClick={() => setIsFilterMenuOpen(false)} 
+                    />
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-zinc-100 rounded-xl shadow-xl z-30 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                      <button
+                        onClick={() => {
+                          setLogOpen(true, null);
+                          setIsFilterMenuOpen(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-zinc-50 transition-colors ${
+                          logFilterAgentIndex === null ? 'text-zinc-900' : 'text-zinc-400'
+                        }`}
+                      >
+                        <div className={`w-2 h-2 rounded-full ${logFilterAgentIndex === null ? 'bg-zinc-900' : 'bg-transparent border border-zinc-200'}`} />
+                        All Agents
+                      </button>
+                      <div className="h-px bg-zinc-50 my-1" />
+                      {AGENTS.map((agent) => (
+                        <button
+                          key={agent.index}
+                          onClick={() => {
+                            setLogOpen(true, agent.index);
+                            setIsFilterMenuOpen(false);
+                          }}
+                          className={`w-full px-4 py-2 text-left text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-zinc-50 transition-colors ${
+                            logFilterAgentIndex === agent.index ? 'text-zinc-900' : 'text-zinc-400'
+                          }`}
+                        >
+                          <div 
+                            className="w-2 h-2 rounded-full" 
+                            style={{ backgroundColor: agent.color }} 
+                          />
+                          {agent.role}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {activeTab === 'technical' && debugEntries.length > 0 && (
+                <button
+                  onClick={handleDownloadAll}
+                  className="text-zinc-400 hover:text-zinc-900 transition-colors p-1 rounded hover:bg-zinc-50 cursor-pointer"
+                  title="Download all as .txt"
+                >
+                  <Download size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Tab Switcher */}
