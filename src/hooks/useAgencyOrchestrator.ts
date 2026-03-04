@@ -7,13 +7,11 @@ import {
   callBoardroomAgent,
   type AgentFunctionCall,
 } from '../services/agencyService'
+import { ToolHandlerService } from '../services/toolHandlerService'
 import { AGENTS } from '../data/agents'
 
 // ── Constants ─────────────────────────────────────────────────
 const AM_INDEX = 1 // Account Manager
-
-/** Simulated time an agent spends "working" before attempting to complete (ms). */
-const WORK_DURATION_MS = { min: 8_000, max: 20_000 }
 
 const randomBetween = (min: number, max: number) =>
   Math.random() * (max - min) + min
@@ -30,116 +28,20 @@ export function useAgencyOrchestrator() {
   const runningAgents = useRef(new Set<number>())
 
   /**
-   * Process a function call returned by an agent and update the store.
-   * Returns true if the call was handled.
+   * Wrapper for tool handler to include local context.
    */
   const processFunctionCall = (fn: AgentFunctionCall, callerIndex: number): boolean => {
-    const store = useAgencyStore.getState()
+    const handled = ToolHandlerService.process(fn, callerIndex, sceneRef.current)
 
-    switch (fn.name) {
-      case 'propose_task': {
-        const { agentIds, title, description, requiresApproval } = fn.args as {
-          agentIds: number[]
-          title: string
-          description: string
-          requiresApproval: boolean
-        }
-        const task = store.addTask({
-          title: title || 'New Task',
-          description,
-          assignedAgentIds: agentIds,
-          status: 'scheduled',
-          requiresClientApproval: requiresApproval ?? false,
-        })
-        store.addLogEntry({
-          agentIndex: callerIndex,
-          action: `proposed task "${title || description}" → assigned to ${agentIds.map(i => AGENTS[i]?.role).join(', ')}`,
-          taskId: task.id,
-        })
-        // Transition to working phase on first task creation
-        if (store.phase === 'briefing' || store.phase === 'idle') {
-          store.setPhase('working')
-        }
-        return true
-      }
-
-      case 'execute_work': {
-        const { taskId } = fn.args as { taskId: string }
-        store.updateTaskStatus(taskId, 'in_progress')
-        store.addLogEntry({
-          agentIndex: callerIndex,
-          action: `started work on task`,
-          taskId,
-        })
-        sceneRef.current?.setNpcWorking(callerIndex, true)
-        return true
-      }
-
-      case 'request_client_approval': {
-        const { taskId, question } = fn.args as { taskId: string; question: string }
-        store.updateTaskStatus(taskId, 'on_hold')
-        store.setPendingApproval(taskId)
-        store.addLogEntry({
-          agentIndex: callerIndex,
-          action: `requested client approval — "${question}"`,
-          taskId,
-        })
-        sceneRef.current?.setNpcWorking(callerIndex, false)
-        return true
-      }
-
-      case 'complete_task': {
-        const { taskId, output } = fn.args as { taskId: string; output: string }
-        store.updateTaskStatus(taskId, 'done')
-        store.setTaskOutput(taskId, output)
-        store.addLogEntry({
-          agentIndex: callerIndex,
-          action: `completed task`,
-          taskId,
-        })
-        sceneRef.current?.setNpcWorking(callerIndex, false)
-        runningAgents.current.delete(callerIndex)
-
-        // Use a small timeout to allow state to settle before checking if all tasks are done
-        setTimeout(() => {
-          checkAllTasksDone()
-        }, 100)
-        return true
-      }
-
-      case 'propose_subtask': {
-        const { agentId, title, description } = fn.args as { agentId: number; title: string; description: string }
-        const parentTask = useAgencyStore.getState().tasks.find(
-          (t) => t.assignedAgentIds.includes(callerIndex) && t.status === 'in_progress'
-        )
-        const sub = store.addTask({
-          title: title || 'Subtask',
-          description,
-          assignedAgentIds: [agentId],
-          status: 'scheduled',
-          requiresClientApproval: false,
-          parentTaskId: parentTask?.id,
-        })
-        store.addLogEntry({
-          agentIndex: callerIndex,
-          action: `proposed subtask for ${AGENTS[agentId]?.role} — "${title || description}"`,
-          taskId: sub.id,
-        })
-        return true
-      }
-
-      case 'notify_client_project_ready': {
-        const { finalPrompt } = fn.args as { finalPrompt: string }
-        store.setFinalOutput(finalPrompt)
-        store.setPhase('done')
-        // store.setFinalOutputOpen(true) // Don't open automatically
-        store.addLogEntry({
-          agentIndex: callerIndex,
-          action: `delivered final prompt to client`,
-        })
-        return true
-      }
+    // Additional side effects specific to the orchestrator hook
+    if (handled && fn.name === 'complete_task') {
+      runningAgents.current.delete(callerIndex)
+      setTimeout(() => {
+        checkAllTasksDone()
+      }, 100)
     }
+
+    return handled
   }
 
   // ── Check if all tasks done → trigger AM to wrap up ──────────
@@ -197,10 +99,10 @@ export function useAgencyOrchestrator() {
     await sleep(randomBetween(1500, 3000))
 
     try {
-      // Step 1: Agent acknowledges and starts
+      // Step 1: Agent acknowledges and starts working
       const startResponse = await callAgent({
         agentIndex,
-        userMessage: `You have been assigned task [${task.id}]: "${task.description}". Start working on it now. Call execute_work to begin.`,
+        userMessage: `You have been assigned task [${task.id}]: "${task.description}". Begin by calling execute_work.`,
       })
       if (startResponse.functionCalls) {
         for (const fn of startResponse.functionCalls) {
@@ -208,22 +110,22 @@ export function useAgencyOrchestrator() {
         }
       }
 
-      // If the agent went on hold (approval needed), stop here — resumption handles the rest
+      // If the agent went on hold (approval needed), stop here
       if (useAgencyStore.getState().tasks.find((t) => t.id === task.id)?.status === 'on_hold') {
         return
       }
 
-      // Step 2: Simulate work duration
-      await sleep(randomBetween(WORK_DURATION_MS.min, WORK_DURATION_MS.max))
+      // Step 2: Reflection / Drafting phase (Replaces artificial WORK_DURATION_MS)
+      // This provides more "realistic" agent behavior as they actually process the request
+      await callAgent({
+        agentIndex,
+        userMessage: `Draft a preliminary version of your prompt for this task. Identify any challenges or missing information internally.`,
+      })
 
-      // Bail if task was cancelled or already done by now
-      const currentStatus = useAgencyStore.getState().tasks.find((t) => t.id === task.id)?.status
-      if (currentStatus !== 'in_progress') return
-
-      // Step 3: Agent completes the task
+      // Step 3: Refinement and Completion
       const completeResponse = await callAgent({
         agentIndex,
-        userMessage: `You have been working on task [${task.id}]: "${task.description}". Your work is done. Call complete_task with your final prompt output.`,
+        userMessage: `Now produce the final high-quality prompt for task [${task.id}]. Call complete_task with your output.`,
       })
       if (completeResponse.functionCalls) {
         for (const fn of completeResponse.functionCalls) {
@@ -378,19 +280,26 @@ export function useAgencyOrchestrator() {
           }
           // Restart the work loop for this agent
           sceneRef.current?.setNpcWorking(npcIndex, true)
-          sleep(randomBetween(WORK_DURATION_MS.min, WORK_DURATION_MS.max)).then(async () => {
-            const status = useAgencyStore.getState().tasks.find((t) => t.id === task.id)?.status
-            if (status !== 'in_progress') return
-            const completeRes = await callAgent({
-              agentIndex: npcIndex,
-              userMessage: `Complete your task now. Call complete_task with your final prompt.`,
-            })
-            if (completeRes.functionCalls) {
-              for (const fn of completeRes.functionCalls) {
-                processFunctionCall(fn, npcIndex)
-              }
-            }
+
+          // Reflection / Dreaming phase
+          await callAgent({
+            agentIndex: npcIndex,
+            userMessage: `Client responded: "${text}". Draft a updated version of your prompt taking this feedback into account. Identify any new challenges.`,
           })
+
+          const status = useAgencyStore.getState().tasks.find((t) => t.id === task.id)?.status
+          if (status !== 'in_progress') return
+
+          const completeRes = await callAgent({
+            agentIndex: npcIndex,
+            userMessage: `Complete your task now. Call complete_task with your final prompt.`,
+          })
+
+          if (completeRes.functionCalls) {
+            for (const fn of completeRes.functionCalls) {
+              processFunctionCall(fn, npcIndex)
+            }
+          }
           return response.text || null
         } catch (err) {
           console.error('[Orchestrator] approval resume error:', err)
