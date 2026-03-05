@@ -56,14 +56,14 @@ export function useAgencyOrchestrator() {
   // ── Check if all tasks done → trigger AM to wrap up ──────────
   const checkAllTasksDone = async () => {
     const store = useAgencyStore.getState()
-    if (store.phase !== 'working') return
+    if (store.phase !== 'working' && store.phase !== 'awaiting_approval') return
 
-    // Check if there are any tasks at all
-    if (store.tasks.length === 0) return
+    // Check if ALL tasks are done (if tasks is empty, it's also "all done" if we were working)
+    const hasTasks = store.tasks.length > 0;
+    const allDone = hasTasks && store.tasks.every((t) => t.status === 'done');
+    const isEmptyWorking = !hasTasks && (store.phase === 'working' || store.phase === 'awaiting_approval');
 
-    // Check if ALL tasks are done
-    const allDone = store.tasks.every((t) => t.status === 'done')
-    if (!allDone) return
+    if (!allDone && !isEmptyWorking) return
 
     // Check if we already delivered the final output
     if (store.finalOutput) return
@@ -78,9 +78,11 @@ export function useAgencyOrchestrator() {
         .map((t) => `[${t.description}]\n${t.output}`)
         .join('\n\n---\n\n')
 
-      const response = await callOrchestrator(
-        `All tasks are completed. Team outputs:\n\n${outputs}\n\nNow assemble the final prompt for the client and call notify_client_project_ready.`
-      )
+      const prompt = hasTasks
+        ? `All tasks are completed. Team outputs:\n\n${outputs}\n\nNow assemble the final prompt for the client and call notify_client_project_ready.`
+        : `All tasks have been removed. The project is effectively empty but needs to be closed. Summarize the situation and call notify_client_project_ready.`
+
+      const response = await callOrchestrator(prompt)
       if (response.functionCalls) {
         for (const fn of response.functionCalls) {
           processFunctionCall(fn, ORCHESTRATOR_INDEX)
@@ -319,6 +321,14 @@ export function useAgencyOrchestrator() {
 
     // Watch for new scheduled tasks and dispatch them
     const unsub = useAgencyStore.subscribe((s, prev) => {
+      // Check if tasks changed status or were removed, making project ready
+      const tasksChanged = s.tasks.some((t, i) => t.status !== prev.tasks[i]?.status) ||
+                           s.tasks.length !== prev.tasks.length;
+
+      if (tasksChanged) {
+        checkAllTasksDone();
+      }
+
       // Find tasks that just became 'scheduled' (were not present or not scheduled before)
       const newScheduled = s.tasks.filter(
         (t) =>
