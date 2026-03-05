@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAgencyStore } from '../store/agencyStore';
 import { ScrollText, RefreshCcw, Users } from 'lucide-react';
 import AgentSetPickerModal from './AgentSetPickerModal';
+import ResetModal from './ResetModal';
 import { useSceneManager } from '../three/SceneContext';
 import { abortAllCalls } from '../services/agencyService';
 import { getAgentSet } from '../data/agents';
@@ -12,11 +13,24 @@ const ProjectView: React.FC = () => {
     phase,
     actionLog,
     selectedAgentSetId,
+    resetProject,
   } = useAgencyStore();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const scene = useSceneManager();
 
   const hasLogs = actionLog.length > 0;
   const activeSet = getAgentSet(selectedAgentSetId);
+
+  const handleResetConfirm = () => {
+    // 1. Cancel all in-flight LLM calls
+    abortAllCalls();
+    // 2. Reset the 3D scene (teleport agents, clear chat)
+    scene?.resetScene();
+    // 3. Clear agency state
+    resetProject();
+    setIsResetModalOpen(false);
+  };
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-6 bg-white/50">
@@ -43,7 +57,7 @@ const ProjectView: React.FC = () => {
       {hasLogs && (
         <div className="mb-8 flex justify-end">
           <button
-            onClick={() => setIsPickerOpen(true)}
+            onClick={() => setIsResetModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-100/50 hover:bg-zinc-100 text-zinc-400 hover:text-red-500 rounded-lg transition-all active:scale-95 group border border-transparent hover:border-red-100"
           >
             <RefreshCcw size={12} className="transition-transform group-hover:rotate-180 duration-500" />
@@ -69,6 +83,12 @@ const ProjectView: React.FC = () => {
         isOpen={isPickerOpen}
         onClose={() => setIsPickerOpen(false)}
         hasActiveProject={hasLogs}
+      />
+
+      <ResetModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+        onConfirm={handleResetConfirm}
       />
     </div>
   );
