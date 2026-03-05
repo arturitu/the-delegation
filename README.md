@@ -10,7 +10,21 @@
 
 Unlike traditional "chat-only" agent frameworks, these characters are _embodied_: they navigate a 3D environment, claim workstations, express emotions through animations, and interact with the user and each other to fulfill complex project briefs.
 
----
+## Getting Started
+
+1. **Install dependencies:**
+
+```bash
+npm install
+```
+
+2. **Run the development server:**
+
+```bash
+npm run dev
+```
+
+3. **Open the app:** Navigate to the local URL shown in your terminal (usually `http://localhost:3000`).
 
 ## Features
 
@@ -32,34 +46,12 @@ Unlike traditional "chat-only" agent frameworks, these characters are _embodied_
 - **Agent Inspector:** Select any agent to view their current "thoughts", mission, and history.
 - **Kanban & Action Logs:** Complete transparency into the agency's progress and the "hidden" tool calls made by the LLMs.
 
----
-
-## Getting Started
-
-1. **Install dependencies:**
-
-```bash
-npm install
-```
-
-2. **Run the development server:**
-
-```bash
-npm run dev
-```
-
-3. **Open the app:** Navigate to the local URL shown in your terminal (usually `http://localhost:5173`).
-
----
-
 ## Tech Stack Deep Dive
 
 - **Engine:** [Three.js](https://threejs.org/) (WebGPU & TSL) for cutting-edge rendering and compute.
 - **AI:** [Google Gemini 3 Flash](https://deepmind.google/technologies/gemini/) (Preview) for low-latency, high-context reasoning and tool use.
 - **State:** [Zustand](https://github.com/pmndrs/zustand) for a unified, reactive store bridging the 3D world and React UI.
 - **Animation:** Custom state machine handling GLTF instanced animations.
-
----
 
 ## Roadmap
 
@@ -74,15 +66,13 @@ We are moving towards a fully sandboxable agency experience:
 - **World Building**
   - [ ] **Office/3D Space Editor:** Drag-and-drop editor to customize the workspace layout and POIs.
 
----
-
 ## Supporting the Project
 
 The Delegation is an experiment in the future of human-AI collaboration. If you find this project inspiring or useful for your own research, consider supporting my work:
 
-**[Sponsor on GitHub](https://github.com/sponsors/arturitu)**
-
----
+<a href="https://github.com/sponsors/arturitu">
+  <img src="https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=github" alt="GitHub Sponsors">
+</a>
 
 ## License & IP
 
@@ -91,8 +81,6 @@ This project follows a dual-licensing model:
 - **Source Code (MIT):** All logic, shaders, and UI code are free to use, modify, and distribute.
 - **3D Models & Assets (CC BY-NC 4.0):** The custom 3D office and character models are Copyright © 2026 **Arturo Paracuellos (unboring.net)**. They are free for personal and educational use but _cannot_ be used for commercial purposes without permission.
 
----
-
 <p align="center">
-  Developed by <a href="https://unboring.net">Arturo Paracuellos</a>
+Developed with ❤️ by <a href="https://unboring.net">Arturo Paracuellos</a>
 </p>
