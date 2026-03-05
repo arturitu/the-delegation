@@ -56,8 +56,8 @@ export function useChatAvailability(agentIndex: number | null): ChatAvailability
       return { canChat: true, reason: '' }
 
     case 'done':
-      // Only AM is available to show the "Project Ready" card
-      if (agentIndex === AM_INDEX) return { canChat: true, reason: '' }
+      // AM is locked for chat when project is ready
+      if (agentIndex === AM_INDEX) return { canChat: false, reason: 'Project ready for delivery' }
       return { canChat: false, reason: 'Project completed' }
 
     default:

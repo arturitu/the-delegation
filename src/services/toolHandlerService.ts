@@ -80,6 +80,14 @@ export class ToolHandlerService {
 
       case 'receive_client_approval': {
         const { taskId } = fn.args as { taskId: string };
+
+        // Validate task existence
+        const task = store.tasks.find(t => t.id === taskId);
+        if (!task) {
+          console.warn(`[ToolHandler] Agent tried to approve non-existent task: ${taskId}`);
+          return false;
+        }
+
         store.updateTaskStatus(taskId, 'in_progress');
         store.setPendingApproval(null);
         store.addLogEntry({
@@ -87,7 +95,13 @@ export class ToolHandlerService {
           action: `received client approval - resuming work`,
           taskId,
         });
+
         scene?.setNpcWorking(callerIndex, true);
+
+        // If the agent was in the boardroom waiting, return them
+        if (scene && 'returnNpcFromBoardroom' in scene) {
+          (scene as any).returnNpcFromBoardroom(callerIndex);
+        }
 
         // Auto-end chat from the agent side
         if (scene && 'endChat' in scene) {
@@ -143,7 +157,15 @@ export class ToolHandlerService {
         });
         return true;
       }
-
+      case 'update_client_brief': {
+        const { brief } = fn.args as { brief: string };
+        store.setClientBrief(brief);
+        store.addLogEntry({
+          agentIndex: callerIndex,
+          action: `updated client brief — "${brief.slice(0, 50)}..."`,
+        });
+        return true;
+      }
       default:
         console.warn(`[ToolHandler] Unknown function: ${fn.name}`);
         return false;

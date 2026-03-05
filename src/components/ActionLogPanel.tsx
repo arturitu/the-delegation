@@ -419,21 +419,6 @@ ${entry.rawContent}
             </button>
           </div>
 
-          {/* Project Done Action - Only show in Activity tab */}
-          {activeTab === 'activity' && phase === 'done' && (
-            <div className="px-5 py-4 bg-amber-50 border-b border-amber-100 flex flex-col gap-2">
-              <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest leading-none">
-                Final Delivery Ready
-              </p>
-              <button
-                onClick={() => setFinalOutputOpen(true)}
-                className="w-full py-2.5 bg-amber-400 text-black rounded-lg text-xs font-black uppercase tracking-widest hover:bg-amber-500 active:scale-[0.98] transition-all shadow-sm cursor-pointer"
-              >
-                View Project Output
-              </button>
-            </div>
-          )}
-
           {/* Entries */}
           <div className="flex-1 overflow-y-auto p-5 space-y-4 shadow-[inset_0_-20px_20px_-20px_rgba(0,0,0,0.05)]">
             <div ref={topRef} />

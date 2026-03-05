@@ -43,11 +43,17 @@ export class NpcAgentDriver implements IAgentDriver {
       return;
     }
 
-    // If the agent is currently "working" or "on hold" (waiting for approval)
-    // according to the agency system, we let the agency system control its main animation state.
-    const isBusyWithAgency = agencyState.tasks.some(
+    // Special behavior for Account Manager (index 1) when project is ready
+    if (this.agentIndex === 1 && agencyState.phase === 'done') {
+      this._updateProjectReadyBehavior(positions, delta, currentState);
+      return;
+    }
+
+    // Capture current active task (if any)
+    const activeTask = agencyState.tasks.find(
       t => t.assignedAgentIds.includes(this.agentIndex) && (t.status === 'in_progress' || t.status === 'on_hold')
     );
+    const isBusyWithAgency = !!activeTask;
 
     // Detect busy→idle transition: kick the agent to move away immediately
     if (this.wasBusy && !isBusyWithAgency) {
@@ -55,9 +61,22 @@ export class NpcAgentDriver implements IAgentDriver {
     }
     this.wasBusy = isBusyWithAgency;
 
-    if (isBusyWithAgency) {
-       // While busy with agency tasks, the driver suspends autonomous random behaviors.
-       return;
+    if (activeTask) {
+      if (activeTask.status === 'on_hold') {
+        // If on hold (approval needed), stop moving and loop wave
+        if (currentState !== 'wave_loop') {
+          this.controller.cancelMovement(this.agentIndex);
+          this.controller.play(this.agentIndex, 'wave_loop');
+        }
+      } else if (activeTask.status === 'in_progress') {
+        // While working (in_progress), we let the Agency system (via toolHandler)
+        // control the walking/sitting/working animations.
+        // We just ensure we don't return early to let movement happen if it's already walking.
+        if (currentState === 'walk') return;
+      }
+
+      // Suspend autonomous random behaviors while busy
+      return;
     }
 
     // Only decide new actions if we are currently resting in a stable state
@@ -67,6 +86,30 @@ export class NpcAgentDriver implements IAgentDriver {
       if (this.behaviorTimer <= 0) {
         this._decideNextAction(positions, currentState);
       }
+    }
+  }
+
+  private _updateProjectReadyBehavior(positions: Float32Array, delta: number, currentState: string): void {
+    const targetPoi = this.controller.poiManager.getPoi('idle-spawn-1');
+    if (!targetPoi) return;
+
+    const currentPos = new THREE.Vector3(
+      positions[this.agentIndex * 4],
+      positions[this.agentIndex * 4 + 1],
+      positions[this.agentIndex * 4 + 2]
+    );
+
+    // If not near spawn area, go there
+    const dist = currentPos.distanceTo(targetPoi.position);
+    if (dist > 1 && currentState !== 'walk') {
+      this.controller.moveTo(this.agentIndex, targetPoi.position, 'happy_loop', undefined, currentPos);
+      return;
+    }
+
+    // If arrived or idling near spawn, switch to the looping happy state.
+    const isHappy = currentState === 'happy_loop' || currentState === 'happy';
+    if (!isHappy) {
+      this.controller.play(this.agentIndex, 'happy_loop');
     }
   }
 

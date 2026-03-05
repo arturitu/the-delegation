@@ -103,16 +103,23 @@ export function buildChatSystemPrompt(agentIndex: number): string {
     '',
     'CONTEXT:',
     isAM
-      ? 'You are the Account Manager. The client has approached you to discuss the project, refine the brief, or review final delivery.'
+      ? [
+          'You are the Account Manager. The client is here to discuss a project, refine their brief, or review final delivery.',
+          'IMPORTANT BRIEFING RULE: Do NOT start work (propose tasks) until you have a clear, specific, and actionable brief from the client.',
+          'If the client message is missing details, ask clarifying questions instead of starting the project.',
+          'Use the "update_client_brief" tool to save/update the official brief based on the client\'s input.',
+          'Once the brief is final and you are ready to start, use "propose_task" to assign work to the team.'
+        ].join(' ')
       : 'The client has approached you for a conversation. If you previously requested their approval/feedback on a task (ON_HOLD), they are here to provide it so you can resume work.',
     'Be helpful, friendly, and stay in character.',
     '',
     'RULES:',
     '- Be conversational and responsive. Answer the client\'s questions directly.',
-    '- If you previously asked for approval/information for a task and the client has now provided it, you MUST use the "receive_client_approval" tool to move the task back to in_progress and let them know you are resuming work.',
-    '- When you call "receive_client_approval", the chat will automatically end as you head back to work.',
+    '- IF the client provides the feedback or approval you needed to CONTINUE (the task stays in progress): call "receive_client_approval". The chat session will terminate and you will return to your workstation.',
+    '- IF the client provides the final sign-off or enough info that your work is actually DONE: call "complete_task" with your final output (max 500 words). The chat session will also terminate.',
     '- Keep replies concise (2-4 sentences) unless the client asks for detail.',
-    '- Do NOT propose new tasks or execute work via tools here (unless using receive_client_approval).',
+    '- Use "update_client_brief" if you are the Account Manager and the project requirements have changed.',
+    '- Do NOT propose new tasks or execute work via tools here (unless you are the AM starting the project).',
   ]
     .join('\n')
     .trim()

@@ -64,7 +64,9 @@ const UIOverlay: React.FC = () => {
       {(() => {
         // Priority 1: Selected Agent
         if (selectedAgent && selectedPosition) {
+          const isAMProjectReady = selectedAgent.index === AM_INDEX && phase === 'done';
           const label = getAgentPhaseLabel(selectedAgent.index, tasks, phase, approvalAgentIndex, selectedAgent.department);
+
           return (
             <div
               className="absolute z-10 pointer-events-none transition-all duration-75 ease-out"
@@ -82,6 +84,10 @@ const UIOverlay: React.FC = () => {
                 <div className="flex items-center gap-1.5">
                   {selectedAgent.isPlayer ? (
                     <span className="text-[10px] font-black uppercase tracking-widest text-white">{selectedAgent.role} (You)</span>
+                  ) : isAMProjectReady ? (
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${label.className}`}>
+                      {label.text}
+                    </span>
                   ) : (
                     <>
                       <span className="text-[10px] font-black uppercase tracking-widest text-white">
@@ -101,7 +107,9 @@ const UIOverlay: React.FC = () => {
 
         // Priority 2: Hovered Agent with dynamic phase label (only if not selected)
         if (hoveredAgent && hoverPosition && hoveredNpcIndex !== selectedNpcIndex) {
+          const isAMProjectReady = hoveredAgent.index === AM_INDEX && phase === 'done';
           const label = getAgentPhaseLabel(hoveredAgent.index, tasks, phase, approvalAgentIndex, hoveredAgent.department);
+
           return (
             <div
               className="absolute z-10 pointer-events-none transition-all duration-75 ease-out"
@@ -119,6 +127,10 @@ const UIOverlay: React.FC = () => {
                 <div className="flex items-center gap-1.5">
                   {hoveredAgent.isPlayer ? (
                     <span className="text-[10px] font-black uppercase tracking-widest text-white">{hoveredAgent.role} (You)</span>
+                  ) : isAMProjectReady ? (
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${label.className}`}>
+                      {label.text}
+                    </span>
                   ) : (
                     <>
                       <span className="text-[10px] font-black uppercase tracking-widest text-white">

@@ -11,7 +11,6 @@ const AM_INDEX = 1;
 const ChatPanel: React.FC = () => {
   const {
     isChatting,
-    chatMessages,
     isThinking,
     selectedNpcIndex,
     setIsTyping
@@ -25,6 +24,14 @@ const ChatPanel: React.FC = () => {
   const stopTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const agent = selectedNpcIndex !== null ? AGENTS[selectedNpcIndex] : null;
+
+  // Combine store messages with agency histories if needed,
+  // but unified useAgencyStore is the source of truth for history.
+  const agencyStore = useAgencyStore();
+  const chatMessages = selectedNpcIndex !== null
+    ? (agencyStore.agentHistories[selectedNpcIndex] || [])
+    : [];
+
   const isProjectReady = phase === 'done' && selectedNpcIndex === AM_INDEX;
 
   useEffect(() => {
@@ -38,7 +45,16 @@ const ChatPanel: React.FC = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [chatMessages, isThinking]);
+  }, [chatMessages, isThinking, isChatting]);
+
+  useEffect(() => {
+    // Initial scroll when chat opens
+    if (isChatting && scrollRef.current) {
+      setTimeout(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }, 100);
+    }
+  }, [isChatting]);
 
   const simulateTyping = (text: string) => {
     let currentIndex = 0;
@@ -81,28 +97,6 @@ const ChatPanel: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-white relative overflow-hidden shrink-0 pointer-events-auto shadow-2xl">
-      {/* Project Ready Banner when applicable (only inside ChatPanel now) */}
-      {isProjectReady && (
-        <div className="flex flex-col p-6 pb-0 gap-4">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-5 flex flex-col gap-3 shadow-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-yellow-700">Project Ready</span>
-            </div>
-            <p className="text-[13px] text-zinc-600 leading-snug">
-              The team has finished. Your final deliverable is ready to review.
-            </p>
-            <button
-              onClick={() => setFinalOutputOpen(true)}
-              className="flex items-center justify-center gap-2 bg-yellow-400 hover:bg-yellow-300 active:scale-95 text-black px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all w-full shadow-sm"
-            >
-              <FolderOpen size={14} strokeWidth={3} />
-              View Final Output
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Messages */}
       <div
         ref={scrollRef}
@@ -138,15 +132,12 @@ const ChatPanel: React.FC = () => {
                     ? 'bg-blue-50/50 text-zinc-800 rounded-tr-none border border-blue-100/50'
                     : 'bg-zinc-50 text-zinc-800 rounded-tl-none border border-zinc-100'
                   }`}>
-                    {msg.text}
+                    {msg.content}
                   </div>
 
                   <div className={`flex items-center gap-2 mt-2 px-1`}>
                     <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                       {msg.role === 'user' ? 'You' : agent.role.split(' ')[0]}
-                    </span>
-                    <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">
-                      {msg.timestamp}
                     </span>
                   </div>
                 </div>

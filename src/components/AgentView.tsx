@@ -53,15 +53,13 @@ const AgentView: React.FC<AgentViewProps> = ({ agentIndex }) => {
         </div>
       ) : onHoldTask ? (
         <div className="mb-6">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#7EACEA] mb-2 flex items-center gap-2">
+          <div className="text-[10px] font-black uppercase tracking-widest text-[#7EACEA] mb-2 flex items-center gap-2">
              <div className="flex -space-x-1.5">
                 <div className="w-4 h-4 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: agent.color }} />
-                <div className="w-4 h-4 rounded-full border-2 border-white shadow-sm bg-[#7EACEA] flex items-center justify-center">
-                  <span className="text-[6px] text-white font-black">YOU</span>
-                </div>
+                <div className="w-4 h-4 rounded-full border-2 border-white shadow-sm bg-[#7EACEA]" />
              </div>
             Needs Discussion
-          </p>
+          </div>
           <p className="text-sm text-zinc-800 leading-snug font-bold">
             "{onHoldTask.description}"
           </p>
@@ -71,7 +69,7 @@ const AgentView: React.FC<AgentViewProps> = ({ agentIndex }) => {
         </div>
       ) : (
         <div className="mb-6">
-          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2 text-zinc-400/50">
+          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400/50 mb-2">
             Status
           </p>
           <p className="text-sm text-zinc-300 leading-snug italic font-medium">

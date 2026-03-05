@@ -149,4 +149,21 @@ export const AGENCY_TOOLS: LLMToolDefinition[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'update_client_brief',
+      description: 'Account Manager only. Call this to update or refine the official client brief based on the conversation. This does NOT start the working phase; use propose_task for that.',
+      parameters: {
+        type: 'object',
+        properties: {
+          brief: {
+            type: 'string',
+            description: 'The updated, refined, and summarized client brief.',
+          },
+        },
+        required: ['brief'],
+      },
+    },
+  },
 ];

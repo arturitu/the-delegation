@@ -76,9 +76,11 @@ export type CharacterStateKey =
   | 'sit_work'   // looping: seated working
   | 'look_around'
   | 'happy'
+  | 'happy_loop' // looping version of happy, no auto-transition
   | 'sad'
   | 'pick'
-  | 'wave';
+  | 'wave'
+  | 'wave_loop'; // looping version of wave, no auto-transition
 
 /**
  * Declarative definition of a character state.

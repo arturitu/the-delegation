@@ -39,7 +39,6 @@ export const useStore = create<CharacterState>()(
     setSelectedNpc: (index: number | null) => set({
       selectedNpcIndex: index,
       selectedPosition: null,
-      inspectorTab: index !== null ? 'info' : 'info' // Default to info when switching
     }),
     setSelectedPosition: (pos: { x: number; y: number } | null) => set({ selectedPosition: pos }),
     setHoveredNpc: (index: number | null, pos: { x: number; y: number } | null) => set({

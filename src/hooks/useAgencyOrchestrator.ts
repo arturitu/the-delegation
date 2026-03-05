@@ -72,8 +72,6 @@ export function useAgencyOrchestrator() {
     if (runningAgents.current.has(AM_INDEX)) return
     runningAgents.current.add(AM_INDEX)
 
-    store.addLogEntry({ agentIndex: AM_INDEX, action: 'all tasks completed — preparing final delivery' })
-
     try {
       const outputs = store.tasks
         .filter((t) => t.output)
@@ -104,12 +102,6 @@ export function useAgencyOrchestrator() {
       const status = useAgencyStore.getState().tasks.find((t) => t.id === task.id)?.status
       return status === 'on_hold' || status === 'done'
     }
-
-    store.addLogEntry({
-      agentIndex,
-      action: `received task assignment — "${task.description}"`,
-      taskId: task.id,
-    })
 
     await sleep(randomBetween(1500, 3000))
 
@@ -252,8 +244,6 @@ export function useAgencyOrchestrator() {
     if (npcIndex === AM_INDEX) {
       if (store.phase === 'idle') {
         store.setPhase('briefing')
-        store.setClientBrief(text) // initial brief
-        store.addLogEntry({ agentIndex: 0, action: `briefed the team — "${text.slice(0, 80)}..."` })
       }
 
       try {

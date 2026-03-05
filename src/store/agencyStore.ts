@@ -56,6 +56,7 @@ interface AgencyState {
 
   // ── Conversation histories (Agnostic standard) ───────────────
   agentHistories: Record<number, LLMMessage[]>
+  agentSummaries: Record<number, string>
   boardroomHistories: Record<string, LLMMessage[]>
 
   // ── UI ───────────────────────────────────────────────────────
@@ -84,6 +85,7 @@ interface AgencyState {
 
   // ── Actions — History ───────────────────────────────────────
   appendAgentHistory: (agentIndex: number, role: 'user' | 'assistant', parts: any[]) => void;
+  setAgentSummary: (agentIndex: number, summary: string) => void;
   appendBoardroomHistory: (taskId: string, role: 'user' | 'assistant', parts: any[]) => void;
   clearAllHistories: () => void;
 
@@ -96,6 +98,7 @@ interface AgencyState {
   togglePause: () => void;
   setPaused: (paused: boolean) => void;
   togglePauseOnCall: () => void;
+  resetProject: () => void;
 }
 
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
@@ -110,6 +113,7 @@ export const useAgencyStore = create<AgencyState>()(
       actionLog: [],
       debugLog: [],
       agentHistories: {},
+      agentSummaries: {},
       boardroomHistories: {},
       isKanbanOpen: true,
       isLogOpen: true,
@@ -119,6 +123,20 @@ export const useAgencyStore = create<AgencyState>()(
       isResizing: false,
       isPaused: false,
       pauseOnCall: false,
+
+      resetProject: () => set({
+        clientBrief: '',
+        phase: 'idle',
+        finalOutput: null,
+        tasks: [],
+        actionLog: [],
+        debugLog: [],
+        agentHistories: {},
+        agentSummaries: {},
+        boardroomHistories: {},
+        pendingApprovalTaskId: null,
+        isFinalOutputOpen: false,
+      }),
 
       // ... other actions stay as they are ...
       setClientBrief: (brief) => set({ clientBrief: brief }),
@@ -137,11 +155,21 @@ export const useAgencyStore = create<AgencyState>()(
       },
 
       updateTaskStatus: (taskId, status) =>
-        set((s) => ({
-          tasks: s.tasks.map((t) =>
-            t.id === taskId ? { ...t, status, updatedAt: Date.now() } : t
-          ),
-        })),
+        set((s) => {
+          const task = s.tasks.find((t) => t.id === taskId);
+          if (!task) return {};
+
+          // Safety check: Cannot move back to 'in_progress' or 'on_hold' if already 'done'
+          if (task.status === 'done' && (status === 'in_progress' || status === 'on_hold')) {
+            return {};
+          }
+
+          return {
+            tasks: s.tasks.map((t) =>
+              t.id === taskId ? { ...t, status, updatedAt: Date.now() } : t
+            ),
+          };
+        }),
 
       setTaskOutput: (taskId, output) =>
         set((s) => ({
@@ -178,6 +206,14 @@ export const useAgencyStore = create<AgencyState>()(
               },
             ],
           },
+        })),
+
+      setAgentSummary: (agentIndex, summary) =>
+        set((s) => ({
+          agentSummaries: {
+            ...s.agentSummaries,
+            [agentIndex]: summary
+          }
         })),
 
       appendBoardroomHistory: (taskId, role, parts) =>

@@ -246,34 +246,35 @@ export class SceneManager {
     if (state.selectedNpcIndex === null || state.isThinking) return;
 
     const npcIndex = state.selectedNpcIndex;
-    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const userMsg: ChatMessage = { role: 'user', text, timestamp };
 
-    useStore.setState((s) => ({
-      chatMessages: [...s.chatMessages, userMsg],
+    // 1. Immediately update UI with user message
+    useAgencyStore.setState((s) => {
+      const currentHistory = s.agentHistories[npcIndex] || [];
+      return {
+        agentHistories: {
+          ...s.agentHistories,
+          [npcIndex]: [...currentHistory, { role: 'user', content: text }]
+        }
+      };
+    });
+
+    useStore.setState({
       isThinking: true,
       isTyping: false,
-    }));
+    });
 
     try {
-      // Direct call to agency system. No more conversationService fallback.
+      // 2. Call agency system
       let responseText: string | null = null;
       if (this.agencyHandler) {
         responseText = await this.agencyHandler(npcIndex, text);
       }
 
-      // If agency system didn't handle it (unlikely with new strict focus),
-      // we can have a fallback but it should be operative.
       if (responseText === null) {
-        responseText = "Sorry, I couldn't process your message right now. Please try again.";
+        responseText = "Understood.";
       }
 
-      const modelMsg: ChatMessage = {
-        role: 'assistant',
-        text: responseText,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      useStore.setState((s) => ({ chatMessages: [...s.chatMessages, modelMsg], isThinking: false }));
+      useStore.setState({ isThinking: false });
     } catch (err) {
       console.error('[SceneManager] sendMessage error:', err);
       useStore.setState({ isThinking: false });
