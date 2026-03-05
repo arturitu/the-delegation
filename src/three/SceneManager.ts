@@ -126,6 +126,12 @@ export class SceneManager {
         this.lastAgentSetId = currentSetId;
         const activeSet = getAgentSet(currentSetId);
         this.worldManager.updateThemeColor(activeSet.color);
+
+        // Force agents to their spawn points when the team changes
+        if (this.controller) {
+          const npcIndices = activeSet.agents.filter(a => !a.isPlayer).map(a => a.index);
+          this.controller.warpAllToSpawn(PLAYER_INDEX, npcIndices);
+        }
       }
 
       // isChatting/isThinking/isTyping → update character visuals
