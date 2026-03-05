@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAgencyStore } from '../store/agencyStore';
-import { ScrollText, RefreshCcw } from 'lucide-react';
+import { ScrollText, RefreshCcw, FolderOpen } from 'lucide-react';
 import ResetModal from './ResetModal';
 import { useSceneManager } from '../three/SceneContext';
 import { abortAllCalls } from '../services/agencyService';
@@ -10,7 +10,8 @@ const ProjectView: React.FC = () => {
     clientBrief,
     phase,
     actionLog,
-    resetProject
+    resetProject,
+    setFinalOutputOpen
   } = useAgencyStore();
   const scene = useSceneManager();
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -65,16 +66,34 @@ const ProjectView: React.FC = () => {
 
       <div className="mb-8">
         <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2">Stage</p>
-        <div className="flex items-center gap-2">
-           <div className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 ${
-             phase === 'working' ? 'bg-blue-500 text-white' :
-             phase === 'done' ? 'bg-green-500 text-white' :
-             phase === 'briefing' ? 'bg-amber-500 text-white' :
-             'bg-zinc-100 text-zinc-400'
-           }`}>
-             <div className={`w-1.5 h-1.5 rounded-full ${['working', 'briefing'].includes(phase) ? 'bg-white animate-pulse' : 'bg-white opacity-40'}`} />
-             {phase}
-           </div>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <div className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 ${
+              phase === 'working' ? 'bg-blue-500 text-white' :
+              phase === 'done' ? 'bg-green-500 text-white' :
+              phase === 'briefing' ? 'bg-amber-500 text-white' :
+              'bg-zinc-100 text-zinc-400'
+            }`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${['working', 'briefing'].includes(phase) ? 'bg-white animate-pulse' : 'bg-white opacity-40'}`} />
+              {phase}
+            </div>
+          </div>
+
+          {phase === 'done' && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex flex-col gap-3 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-yellow-700">Project Ready</span>
+              </div>
+              <button
+                onClick={() => setFinalOutputOpen(true)}
+                className="flex items-center justify-center gap-2 bg-yellow-400 hover:bg-yellow-300 active:scale-95 text-black px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all w-full shadow-sm"
+              >
+                <FolderOpen size={14} strokeWidth={3} />
+                View Final Output
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
