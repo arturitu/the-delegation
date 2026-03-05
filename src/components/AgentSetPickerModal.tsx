@@ -5,6 +5,7 @@ import { AGENT_SETS, AgentSet } from '../data/agents';
 import { useAgencyStore } from '../store/agencyStore';
 import { useSceneManager } from '../three/SceneContext';
 import { abortAllCalls } from '../services/agencyService';
+import ResetModal from './ResetModal';
 
 interface AgentSetPickerModalProps {
   isOpen: boolean;
@@ -80,41 +81,52 @@ const AgentSetPickerModal: React.FC<AgentSetPickerModalProps> = ({
 }) => {
   const { selectedAgentSetId, setAgentSet } = useAgencyStore();
   const [pendingSetId, setPendingSetId] = useState<string>(selectedAgentSetId);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const scene = useSceneManager();
 
   const selectedSet = AGENT_SETS.find((s) => s.id === pendingSetId) ?? AGENT_SETS[0];
   const isChangingSet = pendingSetId !== selectedAgentSetId;
 
   const handleConfirm = () => {
+    if (isChangingSet && hasActiveProject) {
+      setIsResetConfirmOpen(true);
+      return;
+    }
+    executeSwitch();
+  };
+
+  const executeSwitch = () => {
     // 1. Cancel all in-flight LLM calls
     abortAllCalls();
     // 2. Reset the 3D scene (teleport agents, clear chat)
     scene?.resetScene();
     // 3. Switch agent set + reset project state in one atomic update
     setAgentSet(pendingSetId);
+    setIsResetConfirmOpen(false);
     onClose();
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm"
-          />
+        <>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={onClose}
+              className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm"
+            />
 
-          {/* Panel */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-2xl bg-white rounded-[32px] shadow-2xl overflow-hidden border border-zinc-100 max-h-[90vh] flex flex-col"
-          >
+            {/* Panel */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-white rounded-[32px] shadow-2xl overflow-hidden border border-zinc-100 max-h-[90vh] flex flex-col"
+            >
             {/* Header */}
             <div className="px-8 pt-8 pb-6 shrink-0">
               <div className="flex items-start justify-between mb-4">
@@ -173,6 +185,13 @@ const AgentSetPickerModal: React.FC<AgentSetPickerModalProps> = ({
             </div>
           </motion.div>
         </div>
+
+        <ResetModal
+          isOpen={isResetConfirmOpen}
+          onClose={() => setIsResetConfirmOpen(false)}
+          onConfirm={executeSwitch}
+        />
+        </>
       )}
     </AnimatePresence>
   );
