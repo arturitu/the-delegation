@@ -112,8 +112,8 @@ export function useAgencyOrchestrator() {
       const response = await callAgent({
         agentIndex,
         userMessage: `You have been assigned task [${task.id}]: "${task.description}". ` +
-          `Produce the best possible final prompt for this task. ` +
-          `Call complete_task with your output, or request_client_approval if you need client input first.`,
+          `First, analyze the task and call request_client_approval to discuss your plan with the client. ` +
+          `If the client approves, call complete_task with your final output.`,
       })
       if (response.functionCalls) {
         for (const fn of response.functionCalls) {
@@ -243,42 +243,39 @@ export function useAgencyOrchestrator() {
     }
 
     // ---- NPC with pending approval ----
-    const pendingId = store.pendingApprovalTaskId
-    if (pendingId) {
-      const task = store.tasks.find(
-        (t) => t.id === pendingId && t.assignedAgentIds.includes(npcIndex),
-      )
-      if (task) {
-        store.setPendingApproval(null)
-        store.updateTaskStatus(task.id, 'in_progress')
-        store.addLogEntry({
-          agentIndex: 0,
-          action: `approved task for ${getAgent(npcIndex)?.role} — resuming work`,
-          taskId: task.id,
+    const pendingTask = store.tasks.find(
+      (t) => t.status === 'on_hold' && t.assignedAgentIds.includes(npcIndex),
+    )
+    if (pendingTask) {
+      store.updateTaskStatus(pendingTask.id, 'in_progress')
+      store.addLogEntry({
+        agentIndex: 0,
+        action: `approved task for ${getAgent(npcIndex)?.role} — resuming work`,
+        taskId: pendingTask.id,
+      })
+
+      runningAgents.current.add(npcIndex)
+      try {
+        sceneRef.current?.setNpcWorking(npcIndex, true)
+
+        // Single combined call: incorporate feedback and complete
+        const response = await callAgent({
+          agentIndex: npcIndex,
+          userMessage: `Client responded: "${text}". Incorporate their feedback and produce your final prompt. ` +
+            `Call request_client_approval if you still need more input, if not Call complete_task with your output.`,
         })
 
-        runningAgents.current.add(npcIndex)
-        try {
-          sceneRef.current?.setNpcWorking(npcIndex, true)
-
-          // Single combined call: incorporate feedback and complete
-          const response = await callAgent({
-            agentIndex: npcIndex,
-            userMessage: `Client responded: "${text}". Incorporate their feedback and produce your final prompt. ` +
-              `Call complete_task with your output, or request_client_approval if you still need more input.`,
-          })
-          if (response.functionCalls) {
-            for (const fn of response.functionCalls) {
-              processFunctionCall(fn, npcIndex)
-            }
+        if (response.functionCalls) {
+          for (const fn of response.functionCalls) {
+            processFunctionCall(fn, npcIndex)
           }
-          return response.text || null
-        } catch (err) {
-          if ((err as DOMException)?.name !== 'AbortError') console.error('[Orchestrator] approval resume error:', err)
-          return null
-        } finally {
-          runningAgents.current.delete(npcIndex)
         }
+        return response.text || null
+      } catch (err) {
+        if ((err as DOMException)?.name !== 'AbortError') console.error('[Orchestrator] approval resume error:', err)
+        return null
+      } finally {
+        runningAgents.current.delete(npcIndex)
       }
     }
 

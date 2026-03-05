@@ -13,13 +13,15 @@ function getAgentPhaseLabel(
   agentIndex: number,
   tasks: Task[],
   phase: string,
-  approvalAgentIndex: number | null,
   fallback: string,
 ): PhaseLabel {
   if (agentIndex === AM_INDEX && phase === 'done') {
     return { text: 'Project Ready!', className: 'text-yellow-400' };
   }
-  if (agentIndex === approvalAgentIndex && phase !== 'done') {
+  const holdTask = tasks.find(
+    t => t.assignedAgentIds.includes(agentIndex) && t.status === 'on_hold',
+  );
+  if (holdTask && phase !== 'done') {
     return { text: 'Approval Needed', className: 'text-orange-400' };
   }
   const activeTask = tasks.find(
@@ -27,12 +29,6 @@ function getAgentPhaseLabel(
   );
   if (activeTask) {
     return { text: 'Working', className: 'text-emerald-400' };
-  }
-  const holdTask = tasks.find(
-    t => t.assignedAgentIds.includes(agentIndex) && t.status === 'on_hold',
-  );
-  if (holdTask) {
-    return { text: 'On Hold', className: 'text-amber-400' };
   }
   return { text: fallback, className: 'text-white/70' };
 }
@@ -48,12 +44,8 @@ const UIOverlay: React.FC = () => {
   const [isHelpOpen, setHelpOpen] = useState(false);
   const {
     tasks,
-    pendingApprovalTaskId,
     phase,
   } = useAgencyStore();
-
-  const approvalTask = tasks.find(t => t.id === pendingApprovalTaskId);
-  const approvalAgentIndex = approvalTask?.assignedAgentIds[0] ?? null;
 
   const selectedAgent = selectedNpcIndex != null ? AGENTS.find(a => a.index === selectedNpcIndex) ?? null : null;
   const hoveredAgent = hoveredNpcIndex != null ? AGENTS.find(a => a.index === hoveredNpcIndex) ?? null : null;
@@ -65,7 +57,7 @@ const UIOverlay: React.FC = () => {
         // Priority 1: Selected Agent
         if (selectedAgent && selectedPosition) {
           const isAMProjectReady = selectedAgent.index === AM_INDEX && phase === 'done';
-          const label = getAgentPhaseLabel(selectedAgent.index, tasks, phase, approvalAgentIndex, selectedAgent.department);
+          const label = getAgentPhaseLabel(selectedAgent.index, tasks, phase, selectedAgent.department);
 
           return (
             <div
@@ -108,7 +100,7 @@ const UIOverlay: React.FC = () => {
         // Priority 2: Hovered Agent with dynamic phase label (only if not selected)
         if (hoveredAgent && hoverPosition && hoveredNpcIndex !== selectedNpcIndex) {
           const isAMProjectReady = hoveredAgent.index === AM_INDEX && phase === 'done';
-          const label = getAgentPhaseLabel(hoveredAgent.index, tasks, phase, approvalAgentIndex, hoveredAgent.department);
+          const label = getAgentPhaseLabel(hoveredAgent.index, tasks, phase, hoveredAgent.department);
 
           return (
             <div

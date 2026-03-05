@@ -194,8 +194,9 @@ export class SceneManager {
 
       // --- New: Pre-fill Chat if agent has pending approval ---
       const agencyStore = useAgencyStore.getState();
-      const pendingTaskId = agencyStore.pendingApprovalTaskId;
-      const task = pendingTaskId ? agencyStore.tasks.find(t => t.id === pendingTaskId && t.assignedAgentIds.includes(npcIndex)) : null;
+      const task = agencyStore.tasks.find(
+        (t) => t.status === 'on_hold' && t.assignedAgentIds.includes(npcIndex),
+      );
 
       if (task) {
         // Find the log entry for the approval request to get the question

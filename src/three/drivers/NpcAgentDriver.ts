@@ -63,10 +63,28 @@ export class NpcAgentDriver implements IAgentDriver {
 
     if (activeTask) {
       if (activeTask.status === 'on_hold') {
-        // If on hold (approval needed), stop moving and loop wave
-        if (currentState !== 'wave_loop') {
-          this.controller.cancelMovement(this.agentIndex);
-          this.controller.play(this.agentIndex, 'wave_loop');
+        const targetPoi = this.controller.poiManager.getPoi('idle-area-boardroom');
+        if (targetPoi) {
+          const currentPos = new THREE.Vector3(
+            positions[this.agentIndex * 4],
+            positions[this.agentIndex * 4 + 1],
+            positions[this.agentIndex * 4 + 2]
+          );
+          const dist = currentPos.distanceTo(targetPoi.position);
+
+          if (dist > 1.5) {
+            if (currentState !== 'walk') {
+              this.controller.moveTo(this.agentIndex, targetPoi.position, 'wave_loop', undefined, currentPos, targetPoi.quaternion);
+            }
+          } else {
+            if (currentState !== 'wave_loop' && currentState !== 'walk') {
+              this.controller.characterManager.setOrientation(this.agentIndex, targetPoi.quaternion);
+              if (currentState !== 'idle') {
+                this.controller.cancelMovement(this.agentIndex);
+              }
+              this.controller.play(this.agentIndex, 'wave_loop');
+            }
+          }
         }
       } else if (activeTask.status === 'in_progress') {
         // While working (in_progress), we let the Agency system (via toolHandler)

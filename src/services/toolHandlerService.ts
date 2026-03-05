@@ -52,7 +52,6 @@ export class ToolHandlerService {
       case 'request_client_approval': {
         const { taskId, question } = fn.args as { taskId: string; question: string };
         store.updateTaskStatus(taskId, 'on_hold');
-        store.setPendingApproval(taskId);
         store.addLogEntry({
           agentIndex: callerIndex,
           action: `requested client approval — "${question}"`,
@@ -88,7 +87,6 @@ export class ToolHandlerService {
         }
 
         store.updateTaskStatus(taskId, 'in_progress');
-        store.setPendingApproval(null);
         store.addLogEntry({
           agentIndex: callerIndex,
           action: `received client approval - resuming work`,

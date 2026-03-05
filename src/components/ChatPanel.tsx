@@ -127,7 +127,7 @@ const ChatPanel: React.FC = () => {
                 </div>
 
                 <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                  <div className={`px-4 py-2.5 rounded-[20px] text-[14px] leading-relaxed shadow-sm ${
+                  <div className={`px-4 py-2.5 rounded-[20px] text-[14px] leading-relaxed shadow-sm whitespace-pre-wrap ${
                     msg.role === 'user'
                     ? 'bg-blue-50/50 text-zinc-800 rounded-tr-none border border-blue-100/50'
                     : 'bg-zinc-50 text-zinc-800 rounded-tl-none border border-zinc-100'

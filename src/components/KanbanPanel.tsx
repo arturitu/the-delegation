@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { useAgencyStore, type Task, type TaskStatus } from '../store/agencyStore'
 import { AGENTS } from '../data/agents'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
+import DeleteTaskModal from './DeleteTaskModal'
 
 const COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: 'scheduled',   label: 'Scheduled'   },
@@ -40,6 +41,8 @@ function renderAgentTag(agentIndex: number) {
 
 function TaskCard({ task }: { task: Task; key?: string }) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const { removeTask } = useAgencyStore()
 
   // For visual representation, if on_hold, we "virtualize" the client being assigned
   const effectiveAgentIds = task.status === 'on_hold'
@@ -47,7 +50,7 @@ function TaskCard({ task }: { task: Task; key?: string }) {
     : task.assignedAgentIds
 
   return (
-    <div key={task.id} className="bg-white rounded-lg border border-black/5 shadow-sm p-3 space-y-2 group">
+    <div key={task.id} className="bg-white rounded-lg border border-black/5 shadow-sm p-3 space-y-2 group relative">
       <div
         className="flex items-start justify-between gap-1 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -55,9 +58,31 @@ function TaskCard({ task }: { task: Task; key?: string }) {
         <h3 className="text-xs text-zinc-900 leading-snug font-bold flex-1">
           {task.title || 'Untitled Task'}
         </h3>
-        <button className="text-zinc-300 group-hover:text-zinc-500 transition-colors">
-          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </button>
+        <div className="flex items-center gap-1">
+          {task.status !== 'done' && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsDeleteModalOpen(true)
+                }}
+                className="p-1 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                title="Remove task"
+              >
+                <Trash2 size={12} />
+              </button>
+              <DeleteTaskModal 
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={() => removeTask(task.id)}
+                taskTitle={task.title}
+              />
+            </>
+          )}
+          <button className="text-zinc-300 group-hover:text-zinc-500 transition-colors">
+            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+        </div>
       </div>
 
       {isExpanded && (

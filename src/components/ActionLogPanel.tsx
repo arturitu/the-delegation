@@ -163,7 +163,7 @@ ${entry.rawContent}
                                     <>
                                         {/* Formatted Text Content */}
                                         {parsedResponse.text && (
-                                            <div className="text-[11px] bg-white p-3 rounded leading-relaxed text-zinc-700 border border-zinc-100 shadow-sm relative italic">
+                                            <div className="text-[11px] bg-white p-3 rounded leading-relaxed text-zinc-700 border border-zinc-100 shadow-sm relative italic whitespace-pre-wrap">
                                                 <div className="absolute -top-2 left-2 bg-white px-1 text-[8px] font-black uppercase text-zinc-400 border border-zinc-100 rounded">Text</div>
                                                 {parsedResponse.text}
                                             </div>

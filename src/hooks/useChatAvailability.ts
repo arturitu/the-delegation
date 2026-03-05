@@ -13,7 +13,7 @@ export interface ChatAvailability {
  * the current project phase and the agent's task state.
  */
 export function useChatAvailability(agentIndex: number | null): ChatAvailability {
-  const { phase, tasks, pendingApprovalTaskId } = useAgencyStore()
+  const { phase, tasks } = useAgencyStore()
 
   if (agentIndex === null) return { canChat: false, reason: '' }
 
@@ -24,13 +24,9 @@ export function useChatAvailability(agentIndex: number | null): ChatAvailability
     (t) => t.assignedAgentIds.includes(agentIndex) && t.status === 'in_progress',
   )
 
-  const isApprovalAgent =
-    pendingApprovalTaskId != null &&
-    tasks.some(
-      (t) =>
-        t.id === pendingApprovalTaskId &&
-        t.assignedAgentIds.includes(agentIndex),
-    )
+  const isApprovalAgent = tasks.some(
+    (t) => t.status === 'on_hold' && t.assignedAgentIds.includes(agentIndex),
+  )
 
   switch (phase) {
     case 'idle':

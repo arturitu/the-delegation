@@ -76,6 +76,7 @@ interface AgencyState {
 
   // ── Actions — Tasks ───────────────────────────────────────────
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Task;
+  removeTask: (taskId: string) => void;
   updateTaskStatus: (taskId: string, status: TaskStatus) => void;
   setTaskOutput: (taskId: string, output: string) => void;
 
@@ -154,6 +155,28 @@ export const useAgencyStore = create<AgencyState>()(
         set((s) => ({ tasks: [...s.tasks, newTask] }))
         return newTask
       },
+
+      removeTask: (taskId) =>
+        set((s) => {
+          const removedTask = s.tasks.find(t => t.id === taskId);
+          const newTasks = s.tasks.filter((t) => t.id !== taskId);
+
+          // Logic to check if removing this task finishes the project
+          const hasRemainingTasks = newTasks.some(t => t.status !== 'done');
+          const isWorking = s.phase === 'working' || s.phase === 'awaiting_approval';
+
+          let nextPhase = s.phase;
+          if (isWorking && !hasRemainingTasks) {
+            nextPhase = 'done';
+          }
+
+          return {
+            tasks: newTasks,
+            phase: nextPhase,
+            // If the pending approval task is removed, clear that as well
+            pendingApprovalTaskId: s.pendingApprovalTaskId === taskId ? null : s.pendingApprovalTaskId,
+          };
+        }),
 
       updateTaskStatus: (taskId, status) =>
         set((s) => {
