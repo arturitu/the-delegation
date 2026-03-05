@@ -24,6 +24,7 @@ export interface AgentSet {
   companyName: string;
   companyType: string;
   companyDescription: string;
+  color: string;
   agents: AgentData[];
 }
 
@@ -37,6 +38,7 @@ export const AGENT_SETS: AgentSet[] = [
     companyName: 'Vivid Creative Agency',
     companyType: 'Creative & Strategy Agency',
     companyDescription: 'A full-service creative agency covering branding, design, development and go-to-market strategy.',
+    color: '#eab308',
     agents: [
       {
         index: 0,
@@ -107,6 +109,7 @@ export const AGENT_SETS: AgentSet[] = [
     companyName: 'BuildFast Studio',
     companyType: 'Independent Dev Studio',
     companyDescription: 'A lean, execution-focused studio where a project lead and a full stack developer ship products from brief to delivery.',
+    color: '#22c55e',
     agents: [
       {
         index: 0,
@@ -147,6 +150,7 @@ export const AGENT_SETS: AgentSet[] = [
     companyName: 'Launchpad Advisors',
     companyType: 'Startup Consulting Firm',
     companyDescription: 'An advisory firm that stress-tests early-stage ideas and shapes them into fundable, scalable businesses.',
+    color: '#8b5cf6',
     agents: [
       {
         index: 0,
@@ -206,6 +210,7 @@ export const AGENT_SETS: AgentSet[] = [
     id: 'content-studio',
     companyName: 'Spark Content Studio',
     companyType: 'Content & Media Studio',
+    color: '#EF52BA',
     companyDescription: 'A content-first studio that turns brand briefs into multi-channel storytelling strategies with measurable reach.',
     agents: [
       {
