@@ -99,6 +99,14 @@ export async function callAgent(params: {
 
   const agentSummary = store.agentSummaries[agentIndex] || '';
 
+  // If the last history entry is a user message matching the current one,
+  // it was pushed by SceneManager for UI snappiness. Strip it to avoid duplication —
+  // we'll add the enriched version (with dynamic context).
+  const lastEntry = history.length > 0 ? history[history.length - 1] : null;
+  if (lastEntry?.role === 'user' && lastEntry.content === userMessage) {
+    history = history.slice(0, -1);
+  }
+
   // If agent history is too long, we keep only last N messages and use a summary
   const MAX_HISTORY = 10;
   if (!isBoardroom && history.length > MAX_HISTORY) {
@@ -137,11 +145,31 @@ export async function callAgent(params: {
   }
   throwIfAborted(signal);
 
-  // 3. Call LLM
-  // We allow tools in chat mode if it's the specific approval or completion tools we need
-  const tools = chatMode
-    ? AGENCY_TOOLS.filter(t => ['receive_client_approval', 'complete_task', 'update_client_brief', 'propose_task'].includes(t.function.name))
-    : AGENCY_TOOLS;
+  // 3. Call LLM — phase-aware tool filtering
+  const AM_INDEX = 1;
+  let tools: typeof AGENCY_TOOLS;
+  if (chatMode) {
+    // Chat mode: only approval, completion, brief update, and task proposal tools
+    tools = AGENCY_TOOLS.filter(t =>
+      ['receive_client_approval', 'complete_task', 'update_client_brief', 'propose_task'].includes(t.function.name)
+    );
+  } else if (isBoardroom) {
+    // Boardroom: subtask delegation + approval tools
+    tools = AGENCY_TOOLS.filter(t =>
+      ['propose_subtask', 'request_client_approval', 'complete_task'].includes(t.function.name)
+    );
+  } else if (agentIndex === AM_INDEX) {
+    // Account Manager (autonomous): orchestration tools only
+    tools = AGENCY_TOOLS.filter(t =>
+      ['propose_task', 'update_client_brief', 'notify_client_project_ready'].includes(t.function.name)
+    );
+  } else {
+    // Worker agents (autonomous): task execution tools only
+    tools = AGENCY_TOOLS.filter(t =>
+      ['complete_task', 'request_client_approval'].includes(t.function.name)
+    );
+  }
+
   const response = await Promise.race([
     provider.generateCompletion(messages, tools, systemInstruction, llmConfig.model, signal),
     abortRace(signal),
@@ -150,30 +178,11 @@ export async function callAgent(params: {
   const text = response.content || '';
   let toolCalls = response.tool_calls || [];
 
-  // --- SAFETY FILTERS ---
-  // 1. If requesting client approval, do NOT execute work or complete task in the same turn.
+  // --- SAFETY FILTER ---
+  // If requesting client approval, do NOT complete task in the same turn.
   const hasApprovalRequest = toolCalls.some(tc => tc.function.name === 'request_client_approval');
   if (hasApprovalRequest) {
-    toolCalls = toolCalls.filter(tc => !['execute_work', 'complete_task'].includes(tc.function.name));
-  }
-
-  // 2. If completing a task, remove redundant 'execute_work' calls for the same task.
-  // This prevents race conditions where a task might be set to 'in_progress' AFTER being 'done'.
-  const completeTaskCalls = toolCalls.filter(tc => tc.function.name === 'complete_task');
-  if (completeTaskCalls.length > 0) {
-    const completedTaskIds = completeTaskCalls.map(tc => {
-      try { return JSON.parse(tc.function.arguments).taskId; } catch { return null; }
-    }).filter(Boolean);
-
-    toolCalls = toolCalls.filter(tc => {
-      if (tc.function.name === 'execute_work') {
-        try {
-          const args = JSON.parse(tc.function.arguments);
-          return !completedTaskIds.includes(args.taskId);
-        } catch { return true; }
-      }
-      return true;
-    });
+    toolCalls = toolCalls.filter(tc => tc.function.name !== 'complete_task');
   }
 
   const functionCalls = toolCalls.map(tc => ({

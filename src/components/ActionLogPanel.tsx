@@ -253,7 +253,7 @@ ${entry.rawContent}
 
 export function ActionLogPanel() {
   const { setLogOpen, actionLog, debugLog, logFilterAgentIndex, phase, setFinalOutputOpen } = useAgencyStore()
-  const [activeTab, setActiveTab] = useState<'activity' | 'technical'>('activity')
+  const [activeTab, setActiveTab] = useState<'activity' | 'technical'>('technical')
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false)
   const topRef = useRef<HTMLDivElement>(null)
 

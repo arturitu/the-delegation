@@ -95,49 +95,28 @@ export function useAgencyOrchestrator() {
 
   // ── Single-agent task work loop ───────────────────────────────
   const runSingleAgentTask = async (task: Task, agentIndex: number) => {
-    const store = useAgencyStore.getState()
-
-    /** Helper to check whether the task has been interrupted (on_hold or already done). */
-    const isTaskInterrupted = () => {
-      const status = useAgencyStore.getState().tasks.find((t) => t.id === task.id)?.status
-      return status === 'on_hold' || status === 'done'
-    }
-
     await sleep(randomBetween(1500, 3000))
 
+    // Programmatically start the task (replaces the old execute_work LLM call)
+    const store = useAgencyStore.getState()
+    store.updateTaskStatus(task.id, 'in_progress')
+    store.addLogEntry({
+      agentIndex,
+      action: `started work on task`,
+      taskId: task.id,
+    })
+    sceneRef.current?.setNpcWorking(agentIndex, true)
+
     try {
-      // Step 1: Agent acknowledges and starts working
-      const startResponse = await callAgent({
+      // Single combined call: draft + complete in one shot
+      const response = await callAgent({
         agentIndex,
-        userMessage: `You have been assigned task [${task.id}]: "${task.description}". Begin by calling execute_work.`,
+        userMessage: `You have been assigned task [${task.id}]: "${task.description}". ` +
+          `Produce the best possible final prompt for this task. ` +
+          `Call complete_task with your output, or request_client_approval if you need client input first.`,
       })
-      if (startResponse.functionCalls) {
-        for (const fn of startResponse.functionCalls) {
-          processFunctionCall(fn, agentIndex)
-        }
-      }
-      if (isTaskInterrupted()) return
-
-      // Step 2: Reflection / Drafting phase
-      const draftResponse = await callAgent({
-        agentIndex,
-        userMessage: `Draft a preliminary version of your prompt for this task. Identify any challenges or missing information internally.`,
-      })
-      // Process any tool calls from the draft (e.g. request_client_approval mid-draft)
-      if (draftResponse.functionCalls) {
-        for (const fn of draftResponse.functionCalls) {
-          processFunctionCall(fn, agentIndex)
-        }
-      }
-      if (isTaskInterrupted()) return
-
-      // Step 3: Refinement and Completion
-      const completeResponse = await callAgent({
-        agentIndex,
-        userMessage: `Now produce the final high-quality prompt for task [${task.id}]. Call complete_task with your output.`,
-      })
-      if (completeResponse.functionCalls) {
-        for (const fn of completeResponse.functionCalls) {
+      if (response.functionCalls) {
+        for (const fn of response.functionCalls) {
           processFunctionCall(fn, agentIndex)
         }
       }
@@ -280,38 +259,16 @@ export function useAgencyOrchestrator() {
 
         runningAgents.current.add(npcIndex)
         try {
+          sceneRef.current?.setNpcWorking(npcIndex, true)
+
+          // Single combined call: incorporate feedback and complete
           const response = await callAgent({
             agentIndex: npcIndex,
-            userMessage: `Client responded: "${text}". Resume the task and complete it.`,
+            userMessage: `Client responded: "${text}". Incorporate their feedback and produce your final prompt. ` +
+              `Call complete_task with your output, or request_client_approval if you still need more input.`,
           })
           if (response.functionCalls) {
             for (const fn of response.functionCalls) {
-              processFunctionCall(fn, npcIndex)
-            }
-          }
-
-          // Check if agent re-requested approval or already completed — bail out if so
-          const statusAfterFirst = useAgencyStore.getState().tasks.find((t) => t.id === task.id)?.status
-          if (statusAfterFirst !== 'in_progress') return response.text || null
-
-          sceneRef.current?.setNpcWorking(npcIndex, true)
-
-          // Reflection / Designing phase
-          await callAgent({
-            agentIndex: npcIndex,
-            userMessage: `Client responded: "${text}". Draft an updated version of your result taking this feedback into account.`,
-          })
-
-          const statusAfterDraft = useAgencyStore.getState().tasks.find((t) => t.id === task.id)?.status
-          if (statusAfterDraft !== 'in_progress') return response.text || null
-
-          const completeRes = await callAgent({
-            agentIndex: npcIndex,
-            userMessage: `Complete your task now. Call complete_task with your final prompt.`,
-          })
-
-          if (completeRes.functionCalls) {
-            for (const fn of completeRes.functionCalls) {
               processFunctionCall(fn, npcIndex)
             }
           }

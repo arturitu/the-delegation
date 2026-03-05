@@ -49,18 +49,6 @@ export class ToolHandlerService {
         return true;
       }
 
-      case 'execute_work': {
-        const { taskId } = fn.args as { taskId: string };
-        store.updateTaskStatus(taskId, 'in_progress');
-        store.addLogEntry({
-          agentIndex: callerIndex,
-          action: `started work on task`,
-          taskId,
-        });
-        scene?.setNpcWorking(callerIndex, true);
-        return true;
-      }
-
       case 'request_client_approval': {
         const { taskId, question } = fn.args as { taskId: string; question: string };
         store.updateTaskStatus(taskId, 'on_hold');

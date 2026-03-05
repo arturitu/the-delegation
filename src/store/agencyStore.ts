@@ -188,12 +188,11 @@ export const useAgencyStore = create<AgencyState>()(
         })),
 
       addDebugLogEntry: (entry) =>
-        set((s) => ({
-          debugLog: [
-            ...s.debugLog,
-            { ...entry, id: `debug_${uid()}`, timestamp: Date.now() },
-          ],
-        })),
+        set((s) => {
+          const newEntry = { ...entry, id: `debug_${uid()}`, timestamp: Date.now() };
+          const updated = [...s.debugLog, newEntry];
+          return { debugLog: updated.length > 30 ? updated.slice(-30) : updated };
+        }),
 
       appendAgentHistory: (agentIndex, role, parts) =>
         set((s) => ({

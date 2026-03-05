@@ -31,23 +31,7 @@ export const AGENCY_TOOLS: LLMToolDefinition[] = [
       },
     },
   },
-  {
-    type: 'function',
-    function: {
-      name: 'execute_work',
-      description: 'Signal you are starting work on your assigned task (moves it to in_progress).',
-      parameters: {
-        type: 'object',
-        properties: {
-          taskId: {
-            type: 'string',
-            description: 'The ID of the task you are starting.',
-          },
-        },
-        required: ['taskId'],
-      },
-    },
-  },
+
   {
     type: 'function',
     function: {
