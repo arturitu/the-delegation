@@ -109,7 +109,7 @@ const UIOverlay: React.FC = () => {
         // - Orchestrator (index 1) idle: siren
         if (agent.index === ORCHESTRATOR_INDEX && phase === 'idle') {
           alertIcon = <Siren size={18} />;
-          alertColor = '#ef4444'; // Red for siren
+          alertColor = '#facc15'; // Yellow for siren
         }
         // - Orchestrator (index 1) project finished: party-popper
         else if (agent.index === ORCHESTRATOR_INDEX && phase === 'done') {
