@@ -18,6 +18,7 @@ export interface CharacterState {
   hoveredPoiId: string | null;
   hoveredPoiLabel: string | null;
   hoverPosition: { x: number; y: number } | null;
+  npcScreenPositions: Record<number, { x: number; y: number }>;
   isChatting: boolean;
   isTyping: boolean;
   chatMessages: ChatMessage[];

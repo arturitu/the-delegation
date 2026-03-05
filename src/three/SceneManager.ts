@@ -418,25 +418,34 @@ export class SceneManager {
 
     // 4. NPC screen-space bubble position
     const { selectedNpcIndex, setSelectedPosition, selectedPosition } = useStore.getState();
-    if (selectedNpcIndex !== null && this.controller) {
-      const npcPos = this.controller.getCPUPosition(selectedNpcIndex);
-      if (npcPos) {
-        const screenPos = npcPos.clone();
-        screenPos.y += BUBBLE_Y_OFFSET;
-        screenPos.project(this.stage.camera);
+    const npcScreenPositions: Record<number, { x: number; y: number }> = {};
+    const rect = this.container.getBoundingClientRect();
 
-        const rect = this.container.getBoundingClientRect();
-        const nextX = (screenPos.x * 0.5 + 0.5) * rect.width;
-        const nextY = (screenPos.y * -0.5 + 0.5) * rect.height;
+    if (this.controller) {
+      const count = this.controller.getCount();
+      for (let i = 0; i < count; i++) {
+        const npcPos = this.controller.getCPUPosition(i);
+        if (npcPos) {
+          const screenPos = npcPos.clone();
+          screenPos.y += BUBBLE_Y_OFFSET;
+          screenPos.project(this.stage.camera);
 
-        // Optimization: only update state if the position has changed significantly (e.g. > 0.5px)
-        // This reduces Unnecessary React re-renders in the main loop.
-        const dx = Math.abs(nextX - (selectedPosition?.x ?? 0));
-        const dy = Math.abs(nextY - (selectedPosition?.y ?? 0));
-
-        if (dx > 0.5 || dy > 0.5) {
-          setSelectedPosition({ x: nextX, y: nextY });
+          const nextX = (screenPos.x * 0.5 + 0.5) * rect.width;
+          const nextY = (screenPos.y * -0.5 + 0.5) * rect.height;
+          npcScreenPositions[i] = { x: nextX, y: nextY };
         }
+      }
+      useStore.setState({ npcScreenPositions });
+    }
+
+    if (selectedNpcIndex !== null && npcScreenPositions[selectedNpcIndex]) {
+      const { x: nextX, y: nextY } = npcScreenPositions[selectedNpcIndex];
+      // Optimization: only update state if the position has changed significantly (e.g. > 0.5px)
+      const dx = Math.abs(nextX - (selectedPosition?.x ?? 0));
+      const dy = Math.abs(nextY - (selectedPosition?.y ?? 0));
+
+      if (dx > 0.5 || dy > 0.5) {
+        setSelectedPosition({ x: nextX, y: nextY });
       }
     } else {
       if (selectedPosition !== null) setSelectedPosition(null);

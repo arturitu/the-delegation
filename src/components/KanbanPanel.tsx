@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { useAgencyStore, type Task, type TaskStatus } from '../store/agencyStore'
 import { AGENTS } from '../data/agents'
-import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Trash2, MessageSquareWarning } from 'lucide-react'
 import DeleteTaskModal from './DeleteTaskModal'
+import { useStore } from '../store/useStore'
 
 const COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: 'scheduled',   label: 'Scheduled'   },
@@ -43,11 +44,21 @@ function TaskCard({ task }: { task: Task; key?: string }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const { removeTask } = useAgencyStore()
+  const { setSelectedNpc } = useStore()
 
   // For visual representation, if on_hold, we "virtualize" the client being assigned
   const effectiveAgentIds = task.status === 'on_hold'
     ? [...new Set([0, ...task.assignedAgentIds])]
     : task.assignedAgentIds
+
+  const handleSelectAgent = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Select the first assigned NPC (not client)
+    const agentId = task.assignedAgentIds.find(id => id !== 0);
+    if (agentId !== undefined) {
+      setSelectedNpc(agentId);
+    }
+  };
 
   return (
     <div key={task.id} className="bg-white rounded-lg border border-black/5 shadow-sm p-3 space-y-2 group relative">
@@ -59,6 +70,15 @@ function TaskCard({ task }: { task: Task; key?: string }) {
           {task.title || 'Untitled Task'}
         </h3>
         <div className="flex items-center gap-1">
+          {task.status === 'on_hold' && (
+            <button
+              onClick={handleSelectAgent}
+              className="p-1 text-white bg-orange-500 hover:bg-orange-600 rounded mr-1"
+              title="Select agent waiting for approval"
+            >
+              <MessageSquareWarning size={14} />
+            </button>
+          )}
           {task.status !== 'done' && (
             <>
               <button
@@ -71,7 +91,7 @@ function TaskCard({ task }: { task: Task; key?: string }) {
               >
                 <Trash2 size={12} />
               </button>
-              <DeleteTaskModal 
+              <DeleteTaskModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={() => removeTask(task.id)}

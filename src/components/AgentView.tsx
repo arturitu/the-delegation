@@ -16,10 +16,6 @@ const AgentView: React.FC<AgentViewProps> = ({ agentIndex }) => {
     (t) => t.assignedAgentIds.includes(agentIndex) && t.status === 'in_progress'
   ) ?? null;
 
-  const onHoldTask = tasks.find(
-    (t) => t.assignedAgentIds.includes(agentIndex) && t.status === 'on_hold'
-  ) ?? null;
-
   return (
     <div className="flex flex-col h-full p-6">
       {/* Expertise / Traits */}
@@ -49,22 +45,6 @@ const AgentView: React.FC<AgentViewProps> = ({ agentIndex }) => {
           </p>
           <p className="text-sm text-zinc-800 leading-snug font-bold">
             "{activeTask.description}"
-          </p>
-        </div>
-      ) : onHoldTask ? (
-        <div className="mb-6">
-          <div className="text-[10px] font-black uppercase tracking-widest text-[#7EACEA] mb-2 flex items-center gap-2">
-             <div className="flex -space-x-1.5">
-                <div className="w-4 h-4 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: agent.color }} />
-                <div className="w-4 h-4 rounded-full border-2 border-white shadow-sm bg-[#7EACEA]" />
-             </div>
-            Needs Discussion
-          </div>
-          <p className="text-sm text-zinc-800 leading-snug font-bold">
-            "{onHoldTask.description}"
-          </p>
-          <p className="text-[10px] text-zinc-400 mt-2 italic font-medium">
-            Waiting for your input to proceed.
           </p>
         </div>
       ) : (

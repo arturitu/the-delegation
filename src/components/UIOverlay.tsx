@@ -4,8 +4,45 @@ import { useStore } from '../store/useStore';
 import InfoModal from './InfoModal';
 import { AGENTS } from '../data/agents';
 import { useAgencyStore, Task } from '../store/agencyStore';
+import { Siren, MessageSquareWarning, PartyPopper } from 'lucide-react';
 
 const AM_INDEX = 1;
+
+interface AlertBubbleProps {
+  icon: React.ReactNode;
+  position: { x: number; y: number };
+  visible: boolean;
+  color?: string;
+  onClick?: () => void;
+}
+
+const AlertBubble: React.FC<AlertBubbleProps> = ({ icon, position, visible, color = '#facc15', onClick }) => {
+  if (!visible) return null;
+
+  return (
+    <div
+      className={`absolute z-20 transition-all duration-300 ease-out animate-in fade-in zoom-in-95 ${onClick ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`}
+      style={{
+        left: position.x,
+        top: position.y,
+        transform: 'translate(-50%, -100%) translateY(-10px)'
+      }}
+      onClick={(e) => {
+        if (onClick) {
+          e.stopPropagation();
+          onClick();
+        }
+      }}
+    >
+      <div
+        className={`bg-zinc-800/90 backdrop-blur-md p-1.5 rounded-full border border-white/10 shadow-xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform ${onClick ? 'hover:border-white/30' : ''}`}
+        style={{ color }}
+      >
+        {icon}
+      </div>
+    </div>
+  );
+};
 
 type PhaseLabel = { text: string; className: string };
 
@@ -39,7 +76,9 @@ const UIOverlay: React.FC = () => {
     selectedPosition,
     hoveredNpcIndex,
     hoveredPoiLabel,
-    hoverPosition
+    hoverPosition,
+    npcScreenPositions,
+    setSelectedNpc,
   } = useStore();
   const [isHelpOpen, setHelpOpen] = useState(false);
   const {
@@ -52,7 +91,55 @@ const UIOverlay: React.FC = () => {
 
   return (
     <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
-      {/* Selection/Hover/Project Ready Bubble */}
+      {/* 1. Parallel Alert Bubbles System */}
+      {AGENTS.map((agent) => {
+        const pos = npcScreenPositions[agent.index];
+        if (!pos) return null;
+
+        // Condition: Alert disappears when hovered
+        const isCurrentlyHovered = hoveredNpcIndex === agent.index || selectedNpcIndex === agent.index;
+        if (isCurrentlyHovered) return null;
+
+        let alertIcon: React.ReactNode = null;
+        let alertColor = '#facc15'; // Default yellow
+
+        // Check specific conditions
+        // - Agente 1 (AM) idle: siren
+        if (agent.index === AM_INDEX && phase === 'idle') {
+          alertIcon = <Siren size={18} />;
+          alertColor = '#ef4444'; // Red for siren
+        }
+        // - Agente 1 (AM) project finished: party-popper
+        else if (agent.index === AM_INDEX && phase === 'done') {
+          alertIcon = <PartyPopper size={18} />;
+          alertColor = '#facc15'; // Yellow
+        }
+        // - Any agent waiting for approval: message-square-warning
+        else {
+          const hasTaskOnHold = tasks.some(
+            t => t.assignedAgentIds.includes(agent.index) && t.status === 'on_hold'
+          );
+          if (hasTaskOnHold) {
+            alertIcon = <MessageSquareWarning size={18} />;
+            alertColor = '#fb923c'; // Orange-400
+          }
+        }
+
+        if (!alertIcon) return null;
+
+        return (
+          <AlertBubble
+            key={`alert-${agent.index}`}
+            icon={alertIcon}
+            position={pos}
+            visible={true}
+            color={alertColor}
+            onClick={() => setSelectedNpc(agent.index)}
+          />
+        );
+      })}
+
+      {/* 2. Selection/Hover/Project Ready Bubble (Detailed) */}
       {(() => {
         // Priority 1: Selected Agent
         if (selectedAgent && selectedPosition) {
@@ -61,7 +148,7 @@ const UIOverlay: React.FC = () => {
 
           return (
             <div
-              className="absolute z-10 pointer-events-none transition-all duration-75 ease-out"
+              className="absolute z-[25] pointer-events-none transition-all duration-75 ease-out"
               style={{
                 left: selectedPosition.x,
                 top: selectedPosition.y,
@@ -104,7 +191,7 @@ const UIOverlay: React.FC = () => {
 
           return (
             <div
-              className="absolute z-10 pointer-events-none transition-all duration-75 ease-out"
+              className="absolute z-[25] pointer-events-none transition-all duration-75 ease-out"
               style={{
                 left: hoverPosition.x,
                 top: hoverPosition.y,

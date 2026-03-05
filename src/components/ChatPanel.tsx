@@ -96,11 +96,11 @@ const ChatPanel: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white relative overflow-hidden shrink-0 pointer-events-auto shadow-2xl">
+    <div className="flex flex-col h-full bg-white relative overflow-hidden shrink-0 pointer-events-auto">
       {/* Messages */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-6 space-y-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:display-none"
+        className="flex-1 overflow-y-auto p-1 space-y-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:display-none"
       >
         <AnimatePresence initial={false}>
           {chatMessages.map((msg, i) => (
@@ -169,7 +169,7 @@ const ChatPanel: React.FC = () => {
       </div>
 
       {/* Input */}
-      <div className="p-6 border-t border-zinc-50">
+      <div className="p-2 border-t border-zinc-50">
         <div className="relative flex items-center gap-2">
           <div className="flex-1 relative">
             <textarea
@@ -195,23 +195,23 @@ const ChatPanel: React.FC = () => {
                 }
               }}
               placeholder="Message (↵ to send)"
-              className="w-full bg-white border border-zinc-200 rounded-2xl px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all resize-none pr-12 [scrollbar-width:none]"
+              className="w-full bg-white border border-zinc-200 rounded-2xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all resize-none pr-12 [scrollbar-width:none]"
             />
           </div>
           <button
             onClick={handleSend}
             disabled={!input.trim() || isThinking}
             style={{ backgroundColor: !input.trim() || isThinking ? undefined : agent.color }}
-            className={`h-14 w-14 shrink-0 rounded-2xl flex items-center justify-center font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${
+            className={`h-11 w-11 shrink-0 rounded-2xl flex items-center justify-center font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${
               !input.trim() || isThinking
               ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
               : 'text-white shadow-lg hover:brightness-90'
             }`}
           >
-            <Send size={18} strokeWidth={3} />
+            <Send size={16} strokeWidth={3} />
           </button>
         </div>
-        <p className="text-[9px] text-zinc-400 mt-2 text-center font-medium uppercase tracking-wider">
+        <p className="text-[8px] text-zinc-400 mt-2 text-center font-medium uppercase tracking-wider">
           Shift + ↵ for new line
         </p>
       </div>

@@ -14,6 +14,7 @@ export const useStore = create<CharacterState>()(
     hoveredPoiId: null,
     hoveredPoiLabel: null,
     hoverPosition: null,
+    npcScreenPositions: {},
     isChatting: false,
     isTyping: false,
     chatMessages: [],
