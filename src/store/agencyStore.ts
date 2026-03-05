@@ -240,7 +240,14 @@ export const useAgencyStore = create<AgencyState>()(
       setIsResizing: (resizing) => set({ isResizing: resizing }),
       togglePause: () => set((s) => ({ isPaused: !s.isPaused })),
       setPaused: (isPaused) => set({ isPaused }),
-      togglePauseOnCall: () => set((s) => ({ pauseOnCall: !s.pauseOnCall })),
+      togglePauseOnCall: () => set((s) => {
+        const nextPauseOnCall = !s.pauseOnCall;
+        // If turning OFF debug mode and we are paused, resume automatically
+        if (!nextPauseOnCall && s.isPaused) {
+          return { pauseOnCall: nextPauseOnCall, isPaused: false };
+        }
+        return { pauseOnCall: nextPauseOnCall };
+      }),
     }),
     {
       name: 'agency-storage',

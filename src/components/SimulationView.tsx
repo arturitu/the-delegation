@@ -13,6 +13,7 @@ interface SimulationViewProps {
 const SimulationView: React.FC<SimulationViewProps> = ({ canvasRef, isFullscreen, setIsFullscreen }) => {
   const isPaused = useAgencyStore((s) => s.isPaused);
   const setPaused = useAgencyStore((s) => s.setPaused);
+  const pauseOnCall = useAgencyStore((s) => s.pauseOnCall);
   const isPlaying = !isPaused;
   const agentCount = AGENTS.length - 1; // Exclude player agent from count
 
@@ -28,30 +29,32 @@ const SimulationView: React.FC<SimulationViewProps> = ({ canvasRef, isFullscreen
         </div>
 
         {/* Centered Controls */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setPaused(false)}
-            disabled={isPlaying}
-            className={`p-1 border rounded transition-all cursor-pointer ${
-              isPlaying
-                ? 'bg-zinc-50 text-zinc-300 border-zinc-100'
-                : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'
-            }`}
-          >
-            <Play size={14} fill="none" />
-          </button>
-          <button
-            onClick={() => setPaused(true)}
-            disabled={!isPlaying}
-            className={`p-1 border rounded transition-all cursor-pointer ${
-              !isPlaying
-                ? 'bg-zinc-50 text-zinc-300 border-zinc-100'
-                : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'
-            }`}
-          >
-            <Pause size={14} fill="none" />
-          </button>
-        </div>
+        {pauseOnCall && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPaused(false)}
+              disabled={isPlaying}
+              className={`p-1 border rounded transition-all cursor-pointer ${
+                isPlaying
+                  ? 'bg-zinc-50 text-zinc-300 border-zinc-100'
+                  : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'
+              }`}
+            >
+              <Play size={14} fill="none" />
+            </button>
+            <button
+              onClick={() => setPaused(true)}
+              disabled={!isPlaying}
+              className={`p-1 border rounded transition-all cursor-pointer ${
+                !isPlaying
+                  ? 'bg-zinc-50 text-zinc-300 border-zinc-100'
+                  : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'
+              }`}
+            >
+              <Pause size={14} fill="none" />
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 flex items-center justify-end gap-1">
           <button
