@@ -149,7 +149,7 @@ export function useAgencyOrchestrator() {
         arrived++
         if (arrived >= agents.length) resolve()
       }
-      agents.forEach((idx) => sceneRef.current?.moveNpcToBoardroom(idx, onArrival))
+      agents.forEach((idx) => sceneRef.current?.moveNpcToSpawn(idx, onArrival))
     })
 
     store.updateTaskStatus(task.id, 'in_progress')

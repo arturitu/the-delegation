@@ -63,7 +63,8 @@ export class NpcAgentDriver implements IAgentDriver {
 
     if (activeTask) {
       if (activeTask.status === 'on_hold') {
-        const targetPoi = this.controller.poiManager.getPoi('idle-area-boardroom');
+        const spawnId = `idle-spawn-${this.agentIndex}`;
+        const targetPoi = this.controller.poiManager.getPoi(spawnId);
         if (targetPoi) {
           const currentPos = new THREE.Vector3(
             positions[this.agentIndex * 4],
@@ -213,9 +214,9 @@ export class NpcAgentDriver implements IAgentDriver {
       const areaPois = this.controller.poiManager.getFreePoisByPrefix('area-', this.agentIndex);
       if (areaPois.length > 0) {
         const areaPoi = areaPois[Math.floor(Math.random() * areaPois.length)];
-        const target = this.controller.poiManager.getRandomPointNearPoi(areaPoi.id, 3);
+        const target = areaPoi.position;
         if (target) {
-          if (this.controller.moveTo(this.agentIndex, target, 'look_around', undefined, currentPos)) {
+          if (this.controller.moveTo(this.agentIndex, target, 'look_around', undefined, currentPos, areaPoi.quaternion)) {
             this.controller.poiManager.releaseAll(this.agentIndex);
             this.behaviorTimer = Math.random() * 5 + 10;
             return;

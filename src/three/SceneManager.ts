@@ -324,8 +324,8 @@ export class SceneManager {
     }
   }
 
-  /** Walk an NPC to the boardroom area POI. */
-  public moveNpcToBoardroom(index: number, onArrival?: () => void): void {
+  /** Walk an NPC to their designated spawn area POI. */
+  public moveNpcToSpawn(index: number, onArrival?: () => void): void {
     if (!this.controller) return;
     const positions = this.controller.getCPUPositions();
     const currentPos = positions
@@ -335,11 +335,14 @@ export class SceneManager {
           positions[index * 4 + 2],
         )
       : undefined;
-    const boardroomPoi = this.poiManager.getPoi('idle-area-boardroom');
-    if (boardroomPoi) {
-      const target = this.poiManager.getRandomPointNearPoi('idle-area-boardroom', 6)
-        ?? boardroomPoi.position;
-      this.controller.moveTo(index, target, 'idle', onArrival ? () => onArrival() : undefined, currentPos);
+
+    // Convention: idle-spawn-1, idle-spawn-2, etc.
+    const spawnId = `idle-spawn-${index}`;
+    const spawnPoi = this.poiManager.getPoi(spawnId);
+
+    if (spawnPoi) {
+      const target = spawnPoi.position;
+      this.controller.moveTo(index, target, 'idle', onArrival ? () => onArrival() : undefined, currentPos, spawnPoi.quaternion);
     } else if (onArrival) {
       onArrival();
     }

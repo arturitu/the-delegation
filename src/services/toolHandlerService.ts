@@ -73,9 +73,9 @@ export class ToolHandlerService {
           }
         }
 
-        // Move agent to boardroom (waiting area) since they are on hold
-        if (scene && 'moveNpcToBoardroom' in scene) {
-          (scene as any).moveNpcToBoardroom(callerIndex);
+        // Move agent to spawn (waiting area) since they are on hold
+        if (scene && 'moveNpcToSpawn' in scene) {
+          (scene as any).moveNpcToSpawn(callerIndex);
         }
         return true;
       }

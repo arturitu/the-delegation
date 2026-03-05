@@ -77,20 +77,6 @@ export class PoiManager {
     return candidates[Math.floor(Math.random() * candidates.length)];
   }
 
-  /** Returns a random point near a POI (for area wandering). */
-  public getRandomPointNearPoi(poiId: string, radius: number): THREE.Vector3 | null {
-    const poi = this.pois.get(poiId);
-    if (!poi) return null;
-
-    const angle = Math.random() * Math.PI * 2;
-    const r = Math.random() * radius;
-    return new THREE.Vector3(
-      poi.position.x + Math.cos(angle) * r,
-      poi.position.y,
-      poi.position.z + Math.sin(angle) * r
-    );
-  }
-
   /** Returns the nearest free POI of a given arrival state to a world position, or null. */
   public getNearestFreePoi(
     arrivalState: CharacterStateKey,
