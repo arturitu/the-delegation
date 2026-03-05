@@ -87,9 +87,37 @@ export class NpcAgentDriver implements IAgentDriver {
           }
         }
       } else if (activeTask.status === 'in_progress') {
-        // While working (in_progress), we let the Agency system (via toolHandler)
-        // control the walking/sitting/working animations.
-        // We just ensure we don't return early to let movement happen if it's already walking.
+        const pois = this.controller.poiManager.getFreePois('sit_work', this.agentIndex);
+        if (pois.length > 0) {
+          // Use indices for consistent assignment or random like SceneManager
+          const targetPoi = pois[this.agentIndex % pois.length];
+          const currentPos = new THREE.Vector3(
+            positions[this.agentIndex * 4],
+            positions[this.agentIndex * 4 + 1],
+            positions[this.agentIndex * 4 + 2]
+          );
+          const dist = currentPos.distanceTo(targetPoi.position);
+
+          if (dist > 0.5) {
+            if (currentState !== 'walk') {
+              this.controller.moveTo(this.agentIndex, targetPoi.position, 'sit_work', undefined, currentPos, targetPoi.quaternion);
+            }
+          } else {
+            if (currentState !== 'sit_work' && currentState !== 'walk') {
+              this.controller.characterManager.setOrientation(this.agentIndex, targetPoi.quaternion);
+              if (currentState !== 'idle') {
+                this.controller.cancelMovement(this.agentIndex);
+              }
+              this.controller.play(this.agentIndex, 'sit_work');
+            }
+          }
+        } else {
+          // Fallback if no POI is found
+          if (currentState !== 'sit_work' && currentState !== 'walk') {
+            this.controller.play(this.agentIndex, 'sit_work');
+          }
+        }
+
         if (currentState === 'walk') return;
       }
 
