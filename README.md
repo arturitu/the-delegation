@@ -1,11 +1,5 @@
 # The Delegation
 
-### What if you could stop prompting & start delegating to a team of AI agents in a living 3D office?
-
-**The Delegation** is a high-performance 3D simulation built with **Three.js WebGPU** where autonomous LLM-powered characters collaborate in a shared physical workspace.
-
-Unlike traditional "chat-only" agent frameworks, these characters are _embodied_: they navigate a 3D environment, claim workstations, express emotions through animations, and interact with the user and each other to fulfill complex project briefs.
-
 ![The Delegation Hero](public/images/the-delegation-UI.png)
 
 ## Online Demo
@@ -29,6 +23,14 @@ npm run dev
 ```
 
 3. **Open the app:** Navigate to the local URL shown in your terminal (usually `http://localhost:3000`).
+
+## About the Project
+
+### What if you could stop prompting & start delegating to a team of AI agents in a living 3D office?
+
+**The Delegation** is a high-performance 3D simulation built with **Three.js WebGPU** where autonomous LLM-powered characters collaborate in a shared physical workspace.
+
+Unlike traditional "chat-only" agent frameworks, these characters are _embodied_: they navigate a 3D environment, claim workstations, express emotions through animations, and interact with the user and each other to fulfill complex project briefs.
 
 ## Features
 
