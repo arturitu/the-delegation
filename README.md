@@ -2,13 +2,17 @@
 
 ### What if you could stop prompting & start delegating to a team of AI agents in a living 3D office?
 
-<p align="center">
-  <img src="public/images/the-delegation-UI.png" alt="The Delegation Hero" width="100%">
-</p>
-
 **The Delegation** is a high-performance 3D simulation built with **Three.js WebGPU** where autonomous LLM-powered characters collaborate in a shared physical workspace.
 
 Unlike traditional "chat-only" agent frameworks, these characters are _embodied_: they navigate a 3D environment, claim workstations, express emotions through animations, and interact with the user and each other to fulfill complex project briefs.
+
+![The Delegation Hero](public/images/the-delegation-UI.png)
+
+## Online Demo
+
+**Try the Live Demo: [arturitu.github.io/the-delegation](https://arturitu.github.io/the-delegation/)**
+
+This simulation requires **BYOK (Bring Your Own Key)**. Currently, it only supports the **Gemini API** by Google. Multi-provider support is planned for future updates.
 
 ## Getting Started
 
@@ -37,7 +41,7 @@ npm run dev
 ### Embodied Simulation
 
 - **Hybrid GPU/CPU Architecture:** High-efficiency character instancing using WebGPU Compute Shaders.
-- **Intelligent Pathfinding:** NPCs utilize a NavMesh to navigate the office, finding and claiming specific "Points of Interest" (desks, seats, computers) based on their current task.
+- **Intelligent Pathfinding:** NPCs utilize a NavMesh to navigate the office, finding and claiming specific "Points of Interest" (desks, seats, computers) based on their current task. Pathfinding is powered by [three-pathfinding](https://github.com/donmccurdy/three-pathfinding).
 - **Dynamic State Machine:** Characters transition naturally between walking, sitting, working, and talking, with sync'ed 3D speech bubbles and expressions.
 
 ### Interactive UI
@@ -48,14 +52,15 @@ npm run dev
 
 ## Tech Stack Deep Dive
 
-- **Engine:** [Three.js](https://threejs.org/) (WebGPU & TSL) for cutting-edge rendering and compute.
-- **AI:** [Google Gemini 3 Flash](https://deepmind.google/technologies/gemini/) (Preview) for low-latency, high-context reasoning and tool use.
+- **Engine:** [Three.js](https://threejs.org/) (WebGPU & TSL) for advanced rendering and compute.
+- **UI:** [React](https://react.dev/) for a modern, component-based interface.
+- **AI:** [Gemini API](https://deepmind.google/technologies/gemini/) (BYOK: Bring Your Own Key) is the current LLM provider. The architecture is designed for future multi-provider support (see Roadmap).
 - **State:** [Zustand](https://github.com/pmndrs/zustand) for a unified, reactive store bridging the 3D world and React UI.
-- **Animation:** Custom state machine handling GLTF instanced animations.
+- **3D Assets:** All modeling and animation were done in Blender, exported to glTF for efficient use with Three.js. The animation system uses a custom state machine to handle instanced GLTF character animations.
 
 ## Roadmap
 
-We are moving towards a fully sandboxable agency experience:
+My goal is to move towards a fully sandboxable agency experience:
 
 - **Intelligence**
   - [ ] **Multi-Model Support:** Integration for OpenAI, Anthropic, and local Ollama models.
@@ -70,9 +75,7 @@ We are moving towards a fully sandboxable agency experience:
 
 The Delegation is an experiment in the future of human-AI collaboration. If you find this project inspiring or useful for your own research, consider supporting my work:
 
-<a href="https://github.com/sponsors/arturitu">
-  <img src="https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=github" alt="GitHub Sponsors">
-</a>
+[![Sponsor GitHub](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=github)](https://github.com/sponsors/arturitu)
 
 ## License & IP
 
@@ -81,6 +84,4 @@ This project follows a dual-licensing model:
 - **Source Code (MIT):** All logic, shaders, and UI code are free to use, modify, and distribute.
 - **3D Models & Assets (CC BY-NC 4.0):** The custom 3D office and character models are Copyright © 2026 **Arturo Paracuellos (unboring.net)**. They are free for personal and educational use but _cannot_ be used for commercial purposes without permission.
 
-<p align="center">
-Developed with ❤️ by <a href="https://unboring.net">Arturo Paracuellos</a>
-</p>
+Developed with ❤️ by [Arturo Paracuellos](https://unboring.net)

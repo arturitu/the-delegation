@@ -180,10 +180,18 @@ export async function callAgent(params: {
     );
   }
 
-  const response = await Promise.race([
-    provider.generateCompletion(messages, tools, systemInstruction, llmConfig.model, signal),
-    abortRace(signal),
-  ]);
+  let response;
+  try {
+    response = await Promise.race([
+      provider.generateCompletion(messages, tools, systemInstruction, llmConfig.model, signal),
+      abortRace(signal),
+    ]);
+  } catch (e) {
+    if (e instanceof Error && (e.message.includes('API key') || e.message.includes('400') || e.message.includes('401'))) {
+       useStore.getState().setBYOKOpen(true, 'API key not valid. Please check your key and try again.');
+    }
+    throw e;
+  }
 
   const text = response.content || '';
   let toolCalls = response.tool_calls || [];
@@ -313,8 +321,8 @@ async function updateAgentSummary(agentIndex: number) {
         }
     } catch (e) {
         console.error('Failed to update agent summary', e);
-        if (e instanceof Error && (e.message.includes('API key') || e.message.includes('401') || e.message.includes('not found'))) {
-            useStore.getState().setBYOKOpen(true, e.message);
+        if (e instanceof Error && (e.message.includes('API key') || e.message.includes('400') || e.message.includes('401') || e.message.includes('not found'))) {
+            useStore.getState().setBYOKOpen(true, 'API key not valid. Please check your key and try again.');
         }
     }
 }

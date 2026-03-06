@@ -147,9 +147,9 @@ export const AGENT_SETS: AgentSet[] = [
   // ── 3. Music Production ────────────────────────────────
   {
     id: 'music-production',
-    companyName: 'Sonic Bloom Records',
+    companyName: 'SonicAI Bloom Records',
     companyType: 'Music Promotion & Production',
-    companyDescription: 'A boutique musical agency dedicated to composing the perfect song prompt by harmonizing rhythm, melody, and lyrics.',
+    companyDescription: 'A musical agency dedicated to composing the perfect song prompt by harmonizing rhythm, melody, and lyrics.',
     color: '#E97B21',
     agents: [
       {
