@@ -24,6 +24,10 @@ export interface CharacterState {
   chatMessages: ChatMessage[];
   inspectorTab: 'info' | 'chat';
 
+  isBYOKOpen: boolean;
+  byokError: string | null;
+  setBYOKOpen: (open: boolean, error?: string | null) => void;
+
   // BYOK LLM Configuration
   llmConfig: LLMConfig;
 

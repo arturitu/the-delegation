@@ -23,6 +23,11 @@ export const useStore = create<CharacterState>()(
     chatMessages: [],
     inspectorTab: 'info',
 
+    isBYOKOpen: false,
+    byokError: null,
+    setBYOKOpen: (open: boolean, error: string | null = null) =>
+      set({ isBYOKOpen: open, byokError: error }),
+
     llmConfig: (() => {
       try {
         const saved = localStorage.getItem('byok-config');

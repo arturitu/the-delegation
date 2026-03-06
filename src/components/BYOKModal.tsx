@@ -16,7 +16,7 @@ const PROVIDERS = [
 ] as const;
 
 const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
-  const { llmConfig, setLlmConfig } = useStore();
+  const { llmConfig, setLlmConfig, byokError, setBYOKOpen } = useStore();
 
   const [selectedProvider, setSelectedProvider] = useState<string>(llmConfig.provider);
   const [apiKey, setApiKey] = useState<string>(llmConfig.apiKey || '');
@@ -87,6 +87,19 @@ const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
               </p>
             </div>
 
+            {/* Error Message */}
+            {byokError && (
+              <div className="mb-6 p-3 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-2 animate-in fade-in slide-in-from-top-2">
+                <div className="mt-0.5 text-red-500">
+                  <X size={14} strokeWidth={3} className="rotate-45" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-red-500 mb-0.5">Authentication Error</p>
+                  <p className="text-[11px] font-medium text-red-600 leading-tight">{byokError}</p>
+                </div>
+              </div>
+            )}
+
             {/* Provider selector */}
             <div className="mb-5">
               <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 mb-2">
@@ -117,9 +130,25 @@ const BYOKModal: React.FC<BYOKModalProps> = ({ onClose }) => {
 
             {/* API Key input */}
             <div className="mb-6">
-              <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 mb-2">
-                Key
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400">
+                  Key
+                </label>
+                {selectedProvider === 'gemini' && (
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noopener"
+                    className="group flex items-center gap-2 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 hover:border-emerald-200 rounded-full transition-all duration-200"
+                  >
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600">Get Gemini API Key</span>
+                    <svg className="text-emerald-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="7" y1="17" x2="17" y2="7"></line>
+                      <polyline points="7 7 17 7 17 17"></polyline>
+                    </svg>
+                  </a>
+                )}
+              </div>
               <div className="relative">
                 <input
                   type={showKey ? 'text' : 'password'}

@@ -69,7 +69,17 @@ export async function callAgent(params: {
   throwIfAborted(signal);
   const { agentIndex, userMessage, isBoardroom = false, boardroomTaskId, chatMode = false } = params;
   const llmConfig = useStore.getState().llmConfig;
-  const provider = LLMFactory.getProvider(llmConfig);
+
+  let provider;
+  try {
+    provider = LLMFactory.getProvider(llmConfig);
+  } catch (e) {
+    if (e instanceof Error && e.message.includes('API key')) {
+      useStore.getState().setBYOKOpen(true, e.message);
+    }
+    throw e;
+  }
+
   const agentData = getActiveAgentSet().agents.find(a => a.index === agentIndex);
 
   // 1. Build context
@@ -295,24 +305,17 @@ async function updateAgentSummary(agentIndex: number) {
     const store = useAgencyStore.getState();
     const history = store.agentHistories[agentIndex] || [];
     const llmConfig = useStore.getState().llmConfig;
-    const provider = LLMFactory.getProvider(llmConfig);
-
-    // Simple prompt to summarize
-    const summaryPrompt: LLMMessage[] = [
-        ...history,
-        {
-            role: 'user',
-            content: 'Please provide a very concise summary (max 100 words) of our conversation so far, focusing on key decisions, project requirements, and your role. This will be used as your memory context.'
-        }
-    ];
-
     try {
+        const provider = LLMFactory.getProvider(llmConfig);
         const response = await provider.generateCompletion(summaryPrompt, [], 'You are an AI assistant helping an agent summarize their conversation history.', llmConfig.model);
         if (response.content) {
             store.setAgentSummary(agentIndex, response.content);
         }
     } catch (e) {
         console.error('Failed to update agent summary', e);
+        if (e instanceof Error && (e.message.includes('API key') || e.message.includes('401') || e.message.includes('not found'))) {
+            useStore.getState().setBYOKOpen(true, e.message);
+        }
     }
 }
 
