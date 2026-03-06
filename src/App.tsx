@@ -78,7 +78,7 @@ const App: React.FC = () => {
   return (
     <SceneContext.Provider value={sceneManager}>
       <AgencyOrchestrator />
-      <div className="w-screen h-screen bg-white overflow-hidden flex flex-col select-none">
+      <div className="w-screen h-screen bg-white overflow-hidden flex flex-col">
         {/* Top: Header */}
         {!isFullscreen && <Header />}
 

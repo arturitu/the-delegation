@@ -92,7 +92,7 @@ const UIOverlay: React.FC = () => {
   const hoveredAgent = hoveredNpcIndex != null ? agents.find(a => a.index === hoveredNpcIndex) ?? null : null;
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+    <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden select-none">
       {/* 1. Parallel Alert Bubbles System */}
       {agents.map((agent) => {
         const pos = npcScreenPositions[agent.index];
