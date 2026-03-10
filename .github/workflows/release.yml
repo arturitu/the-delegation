@@ -1,0 +1,24 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Activa el proceso cuando subes tags como v0.1.0
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Busca el fichero dentro de la carpeta /releases/ que coincida exactamente con el nombre del tag
+          body_path: ./releases/${{ github.ref_name }}.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
