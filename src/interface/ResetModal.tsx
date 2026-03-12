@@ -12,7 +12,7 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, onConfirm }) =
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -24,7 +24,7 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, onConfirm }) =
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-md bg-white rounded-[32px] shadow-2xl overflow-hidden border border-zinc-100"
+            className="relative w-full max-w-md bg-white rounded-4xl shadow-2xl overflow-hidden border border-zinc-100"
           >
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">

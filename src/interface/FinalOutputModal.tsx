@@ -21,7 +21,7 @@ export function FinalOutputModal() {
       onClick={() => setFinalOutputOpen(false)}
     >
       <div
-        className="bg-zinc-50 border border-black/10 rounded-2xl w-[640px] max-w-[95vw] max-h-[80vh] flex flex-col shadow-2xl"
+        className="bg-zinc-50 border border-black/10 rounded-2xl w-160 max-w-[95vw] max-h-[80vh] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

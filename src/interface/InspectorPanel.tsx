@@ -178,7 +178,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({ isFloating }) => {
                   <ChatPanel />
                 </div>
                 {/* Close Chat button at the bottom when chatting */}
-                <div className="p-3 bg-white border-t border-zinc-100 flex-shrink-0">
+                <div className="p-3 bg-white border-t border-zinc-100 shrink-0">
                   <button
                     onClick={handleEndChat}
                     className="w-full h-10 px-4 bg-zinc-900 hover:bg-black text-white rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 text-[10px] font-black uppercase tracking-widest shadow-md"

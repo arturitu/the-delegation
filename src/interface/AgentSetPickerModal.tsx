@@ -117,7 +117,7 @@ const AgentSetPickerModal: React.FC<AgentSetPickerModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -132,7 +132,7 @@ const AgentSetPickerModal: React.FC<AgentSetPickerModalProps> = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl bg-white rounded-[32px] shadow-2xl overflow-hidden border border-zinc-100 max-h-[90vh] flex flex-col"
+              className="relative w-full max-w-2xl bg-white rounded-4xl shadow-2xl overflow-hidden border border-zinc-100 max-h-[90vh] flex flex-col"
             >
             {/* Header */}
             <div className="px-8 pt-8 pb-6 shrink-0">

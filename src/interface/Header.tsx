@@ -82,7 +82,7 @@ const Header: React.FC = () => {
           <span>{pauseOnCall ? 'Debug Mode ON' : 'Debug Mode'}</span>
         </button>
 
-        <div className="w-[1px] h-4 bg-zinc-200 mx-1" />
+        <div className="w-px h-4 bg-zinc-200 mx-1" />
 
         <button
           onClick={handleFullscreen}

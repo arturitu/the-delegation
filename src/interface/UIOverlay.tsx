@@ -150,7 +150,7 @@ const UIOverlay: React.FC = () => {
 
           return (
             <div
-              className="absolute z-[25] pointer-events-none transition-all duration-75 ease-out"
+              className="absolute z-25 pointer-events-none transition-all duration-75 ease-out"
               style={{
                 left: selectedPosition.x,
                 top: selectedPosition.y,
@@ -193,7 +193,7 @@ const UIOverlay: React.FC = () => {
 
           return (
             <div
-              className="absolute z-[25] pointer-events-none transition-all duration-75 ease-out"
+              className="absolute z-25 pointer-events-none transition-all duration-75 ease-out"
               style={{
                 left: hoverPosition.x,
                 top: hoverPosition.y,
