@@ -1,5 +1,5 @@
-import { useAgencyStore } from '../integration/store/agencyStore';
-import { useStore } from '../integration/store/useStore';
+import { useCoreStore } from '../integration/store/coreStore';
+import { useUiStore } from '../integration/store/uiStore';
 import { LLMFactory } from '../core/llm/LLMFactory';
 
 const SUMMARY_PROMPT = "You are an AI assistant helping an agent summarize their conversation history.";
@@ -10,8 +10,8 @@ const SUMMARY_PROMPT = "You are an AI assistant helping an agent summarize their
  */
 export class MemoryService {
   static async updateAgentSummary(agentIndex: number) {
-    const store = useAgencyStore.getState();
-    const llmConfig = useStore.getState().llmConfig;
+    const store = useCoreStore.getState();
+    const llmConfig = useUiStore.getState().llmConfig;
 
     // In a future RAG system, this would interact with a Vector DB.
     // For now, it manages LLM-based summaries.

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useStore } from '../integration/store/useStore';
+import { useUiStore } from '../integration/store/uiStore';
 import { useSceneManager } from '../simulation/SceneContext';
-import { useAgencyStore } from '../integration/store/agencyStore';
+import { useCoreStore } from '../integration/store/coreStore';
 import { getAgentSet } from '../data/agents';
 import { Send, FolderOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -16,9 +16,9 @@ const ChatPanel: React.FC = () => {
     isThinking,
     selectedNpcIndex,
     setIsTyping
-  } = useStore();
+  } = useUiStore();
   const scene = useSceneManager();
-  const { phase, setFinalOutputOpen, selectedAgentSetId } = useAgencyStore();
+  const { phase, setFinalOutputOpen, selectedAgentSetId } = useCoreStore();
   const agents = getAgentSet(selectedAgentSetId).agents;
 
   const [input, setInput] = useState('');
@@ -28,11 +28,11 @@ const ChatPanel: React.FC = () => {
 
   const agent = selectedNpcIndex !== null ? agents.find(a => a.index === selectedNpcIndex) ?? null : null;
 
-  // Combine store messages with agency histories if needed,
-  // but unified useAgencyStore is the source of truth for history.
-  const agencyStore = useAgencyStore();
+  // Combine store messages with project histories if needed,
+  // but unified useCoreStore is the source of truth for history.
+  const coreStore = useCoreStore();
   const chatMessages = selectedNpcIndex !== null
-    ? (agencyStore.agentHistories[selectedNpcIndex] || [])
+    ? (coreStore.agentHistories[selectedNpcIndex] || [])
     : [];
 
   const isProjectReady = phase === 'done' && selectedNpcIndex === ORCHESTRATOR_INDEX;

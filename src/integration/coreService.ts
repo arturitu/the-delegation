@@ -1,5 +1,5 @@
-import { useAgencyStore } from './store/agencyStore'
-import { useStore } from './store/useStore'
+import { useCoreStore } from './store/coreStore'
+import { useUiStore } from './store/uiStore'
 import {
   buildSystemPrompt,
   buildChatSystemPrompt,
@@ -7,8 +7,8 @@ import {
 } from '../core/prompts/agentPrompts'
 import { LLMFactory } from '../core/llm/LLMFactory'
 import { LLMMessage } from '../core/llm/types'
-import { AGENCY_TOOLS } from '../core/llm/toolDefinitions'
-import { getActiveAgentSet } from './store/agencyStore'
+import { CORE_TOOLS } from '../core/llm/toolDefinitions'
+import { getActiveAgentSet } from './store/coreStore'
 import { MemoryService } from '../context/MemoryService'
 
 export interface AgentFunctionCall {
@@ -47,7 +47,7 @@ function abortRace(signal: AbortSignal): Promise<never> {
 const waitForResume = (signal: AbortSignal) => {
     return new Promise<void>((resolve, reject) => {
       if (signal.aborted) { reject(new DOMException('LLM call aborted by reset', 'AbortError')); return; }
-      const unsub = useAgencyStore.subscribe((state, prevState) => {
+      const unsub = useCoreStore.subscribe((state, prevState) => {
         if (prevState.isPaused && !state.isPaused) {
           unsub();
           if (signal.aborted) reject(new DOMException('LLM call aborted by reset', 'AbortError'));
@@ -69,14 +69,14 @@ export async function callAgent(params: {
   const signal = _resetController.signal;
   throwIfAborted(signal);
   const { agentIndex, userMessage, isBoardroom = false, boardroomTaskId, chatMode = false } = params;
-  const llmConfig = useStore.getState().llmConfig;
+  const llmConfig = useUiStore.getState().llmConfig;
 
   let provider;
   try {
     provider = LLMFactory.getProvider(llmConfig);
   } catch (e) {
     if (e instanceof Error && e.message.includes('API key')) {
-      useStore.getState().setBYOKOpen(true, e.message);
+      useUiStore.getState().setBYOKOpen(true, e.message);
     }
     throw e;
   }
@@ -88,7 +88,7 @@ export async function callAgent(params: {
     ? buildChatSystemPrompt(agentIndex)
     : buildSystemPrompt(agentIndex, isBoardroom);
 
-  const store = useAgencyStore.getState();
+  const store = useCoreStore.getState();
   const currentTask = store.tasks.find(
     (t) => t.assignedAgentIds.includes(agentIndex) && t.status === 'in_progress'
   ) ?? null;
@@ -138,7 +138,7 @@ export async function callAgent(params: {
   ];
 
   // Always log the request for the technical log panel
-  useAgencyStore.getState().addDebugLogEntry({
+  useCoreStore.getState().addDebugLogEntry({
       agentIndex,
       agentName: agentData?.role || 'Unknown',
       phase: 'request',
@@ -150,33 +150,33 @@ export async function callAgent(params: {
       taskId: boardroomTaskId || currentTask?.id
   });
   // PAUSE BEFORE CALL (only when debug mode on)
-  if (useAgencyStore.getState().pauseOnCall) {
-    useAgencyStore.getState().setPaused(true);
+  if (useCoreStore.getState().pauseOnCall) {
+    useCoreStore.getState().setPaused(true);
     await waitForResume(signal);
   }
   throwIfAborted(signal);
 
   // 3. Call LLM — phase-aware tool filtering
   const ORCHESTRATOR_INDEX = 1;
-  let tools: typeof AGENCY_TOOLS;
+  let tools: typeof CORE_TOOLS;
   if (chatMode) {
     // Chat mode: only approval, completion, brief update, and task proposal tools
-    tools = AGENCY_TOOLS.filter(t =>
+    tools = CORE_TOOLS.filter(t =>
       ['receive_client_approval', 'complete_task', 'update_client_brief', 'propose_task'].includes(t.function.name)
     );
   } else if (isBoardroom) {
     // Boardroom: subtask delegation + approval tools
-    tools = AGENCY_TOOLS.filter(t =>
+    tools = CORE_TOOLS.filter(t =>
       ['propose_subtask', 'request_client_approval', 'complete_task'].includes(t.function.name)
     );
   } else if (agentIndex === ORCHESTRATOR_INDEX) {
     // Orchestrator (autonomous): orchestration tools only
-    tools = AGENCY_TOOLS.filter(t =>
+    tools = CORE_TOOLS.filter(t =>
       ['propose_task', 'update_client_brief', 'notify_client_project_ready', 'request_client_approval'].includes(t.function.name)
     );
   } else {
     // Worker agents (autonomous): task execution tools only
-    tools = AGENCY_TOOLS.filter(t =>
+    tools = CORE_TOOLS.filter(t =>
       ['complete_task', 'request_client_approval'].includes(t.function.name)
     );
   }
@@ -189,7 +189,7 @@ export async function callAgent(params: {
     ]);
   } catch (e) {
     if (e instanceof Error && (e.message.includes('API key') || e.message.includes('400') || e.message.includes('401'))) {
-       useStore.getState().setBYOKOpen(true, 'API key not valid. Please check your key and try again.');
+       useUiStore.getState().setBYOKOpen(true, 'API key not valid. Please check your key and try again.');
     }
     throw e;
   }
@@ -210,7 +210,7 @@ export async function callAgent(params: {
   }));
 
   // Always log the response for the technical log panel
-  useAgencyStore.getState().addDebugLogEntry({
+  useCoreStore.getState().addDebugLogEntry({
       agentIndex,
       agentName: agentData?.role || 'Unknown',
       phase: 'response',
@@ -222,8 +222,8 @@ export async function callAgent(params: {
       taskId: boardroomTaskId || currentTask?.id
   });
   // PAUSE AFTER RESPONSE (only when debug mode on)
-  if (useAgencyStore.getState().pauseOnCall) {
-    useAgencyStore.getState().setPaused(true);
+  if (useCoreStore.getState().pauseOnCall) {
+    useCoreStore.getState().setPaused(true);
     await waitForResume(signal);
   }
   throwIfAborted(signal);
@@ -282,7 +282,7 @@ export async function callAgent(params: {
   if (shouldUpdateHistory) {
     // Only push assistant message if it exists (user message is now handled immediately in SceneManager for UI snappiness)
     if (assistantMessage) {
-      useAgencyStore.setState((s) => {
+      useCoreStore.setState((s) => {
         if (isBoardroom && boardroomTaskId) {
           return {
             boardroomHistories: {

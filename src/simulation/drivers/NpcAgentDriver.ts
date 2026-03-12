@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { IAgentDriver } from '../../types';
 import { CharacterController } from '../CharacterController';
 import { AgentData } from '../../data/agents';
-import { useAgencyStore } from '../../integration/store/agencyStore';
+import { useCoreStore } from '../../integration/store/coreStore';
 
 
 /**
@@ -20,7 +20,7 @@ export class NpcAgentDriver implements IAgentDriver {
 
   /**
    * External state injected by the pilar 'Integration' or 'Simulation' loop.
-   * This removes the direct dependency on useStore (Interface).
+   * This removes the direct dependency on useUiStore (Interface).
    */
   private isChattingWithMe: boolean = false;
 
@@ -46,7 +46,7 @@ export class NpcAgentDriver implements IAgentDriver {
 
   public update(positions: Float32Array, delta: number): void {
     const currentState = this.controller.getState(this.agentIndex);
-    const agencyState = useAgencyStore.getState();
+    const systemState = useCoreStore.getState();
 
     // If we are currently chatting with this NPC, suspend autonomous behavior
     if (this.isChattingWithMe) {
@@ -54,22 +54,22 @@ export class NpcAgentDriver implements IAgentDriver {
     }
 
     // Special behavior for Orchestrator (index 1) when project is ready
-    if (this.agentIndex === 1 && agencyState.phase === 'done') {
+    if (this.agentIndex === 1 && systemState.phase === 'done') {
       this._updateProjectReadyBehavior(positions, delta, currentState);
       return;
     }
 
     // Capture current active task (if any)
-    const activeTask = agencyState.tasks.find(
+    const activeTask = systemState.tasks.find(
       t => t.assignedAgentIds.includes(this.agentIndex) && (t.status === 'in_progress' || t.status === 'on_hold')
     );
-    const isBusyWithAgency = !!activeTask;
+    const isBusyWithSystem = !!activeTask;
 
     // Detect busy→idle transition: kick the agent to move away immediately
-    if (this.wasBusy && !isBusyWithAgency) {
+    if (this.wasBusy && !isBusyWithSystem) {
       this.behaviorTimer = 0;
     }
-    this.wasBusy = isBusyWithAgency;
+    this.wasBusy = isBusyWithSystem;
 
     if (activeTask) {
       if (activeTask.status === 'on_hold') {

@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { useStore } from '../integration/store/useStore';
+import { useUiStore } from '../integration/store/uiStore';
 import InfoModal from './InfoModal';
 import { getAgentSet } from '../data/agents';
-import { useAgencyStore, Task } from '../integration/store/agencyStore';
+import { useCoreStore, Task } from '../integration/store/coreStore';
 import { Siren, MessageSquareWarning, PartyPopper } from 'lucide-react';
 
 const ORCHESTRATOR_INDEX = 1;
@@ -79,13 +79,13 @@ const UIOverlay: React.FC = () => {
     hoverPosition,
     npcScreenPositions,
     setSelectedNpc,
-  } = useStore();
+  } = useUiStore();
   const [isHelpOpen, setHelpOpen] = useState(false);
   const {
     tasks,
     phase,
     selectedAgentSetId,
-  } = useAgencyStore();
+  } = useCoreStore();
   const agents = getAgentSet(selectedAgentSetId).agents;
 
   const selectedAgent = selectedNpcIndex != null ? agents.find(a => a.index === selectedNpcIndex) ?? null : null;

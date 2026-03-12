@@ -1,5 +1,5 @@
-import { getActiveAgentSet } from '../../integration/store/agencyStore'
-import type { Task } from '../../integration/store/agencyStore'
+import { getActiveAgentSet } from '../../integration/store/coreStore'
+import type { Task } from '../../integration/store/coreStore'
 
 // ─── Scope constraint (fixed for all agents) ──────────────────
 const SCOPE_CONSTRAINT = `

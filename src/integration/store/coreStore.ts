@@ -42,7 +42,7 @@ export interface DebugLogEntry {
 
 export type ProjectPhase = 'idle' | 'briefing' | 'working' | 'awaiting_approval' | 'done'
 
-interface AgencyState {
+interface CoreState {
   // ── Project ──────────────────────────────────────────────────
   clientBrief: string
   phase: ProjectPhase
@@ -109,7 +109,7 @@ interface AgencyState {
 
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
 
-export const useAgencyStore = create<AgencyState>()(
+export const useCoreStore = create<CoreState>()(
   persist(
     (set) => ({
       selectedAgentSetId: DEFAULT_AGENT_SET_ID,
@@ -296,7 +296,10 @@ export const useAgencyStore = create<AgencyState>()(
       }),
     }),
     {
-      name: 'agency-storage',
+      name: 'core-storage',
+      migrate: (persistedState: any, version: number) => {
+        return persistedState;
+      },
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         pauseOnCall: state.pauseOnCall,
@@ -308,6 +311,6 @@ export const useAgencyStore = create<AgencyState>()(
 
 /** Returns the currently active AgentSet. Safe to call from service/non-React contexts. */
 export function getActiveAgentSet(): AgentSet {
-  const { selectedAgentSetId } = useAgencyStore.getState()
+  const { selectedAgentSetId } = useCoreStore.getState()
   return getAgentSet(selectedAgentSetId)
 }

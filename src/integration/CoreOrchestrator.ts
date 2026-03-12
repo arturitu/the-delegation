@@ -1,10 +1,10 @@
-import { useAgencyStore, type Task } from './store/agencyStore';
+import { useCoreStore, type Task } from './store/coreStore';
 import {
   callAgent,
   callOrchestrator,
   callBoardroomAgent,
   type AgentFunctionCall,
-} from './agencyService';
+} from './coreService';
 import { ToolHandlerService } from './toolHandlerService';
 
 const ORCHESTRATOR_INDEX = 1;
@@ -15,10 +15,10 @@ const randomBetween = (min: number, max: number) =>
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /**
- * AgencyOrchestrator - Pure logic class for managing agent tasks and project lifecycle.
+ * CoreOrchestrator - Pure logic class for managing agent tasks and project lifecycle.
  * Part of the 'Integration' pillar.
  */
-export class AgencyOrchestrator {
+export class CoreOrchestrator {
   private runningAgents = new Set<number>();
   private sceneManager: any = null;
 
@@ -34,7 +34,7 @@ export class AgencyOrchestrator {
    * Should be called periodically or on state changes.
    */
   public async tick() {
-    const store = useAgencyStore.getState();
+    const store = useCoreStore.getState();
 
     // 1. Check if all tasks done or project is empty
     await this.checkAllTasksDone();
@@ -63,7 +63,7 @@ export class AgencyOrchestrator {
   }
 
   private async checkAllTasksDone() {
-    const store = useAgencyStore.getState();
+    const store = useCoreStore.getState();
     if (store.phase !== 'working' && store.phase !== 'awaiting_approval') return;
 
     const hasTasks = store.tasks.length > 0;
@@ -115,7 +115,7 @@ export class AgencyOrchestrator {
 
   private async runSingleAgentTask(task: Task, agentIndex: number) {
     await sleep(randomBetween(1500, 3000));
-    const store = useAgencyStore.getState();
+    const store = useCoreStore.getState();
     store.updateTaskStatus(task.id, 'in_progress');
     this.sceneManager?.setNpcWorking(agentIndex, true);
 
@@ -137,7 +137,7 @@ export class AgencyOrchestrator {
   }
 
   private async runBoardroomTask(task: Task) {
-    const store = useAgencyStore.getState();
+    const store = useCoreStore.getState();
     const agents = task.assignedAgentIds;
 
     // Arrival logic

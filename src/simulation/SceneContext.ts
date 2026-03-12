@@ -7,7 +7,7 @@ import { SceneManager } from './SceneManager';
  * Components that need to trigger 3D actions (startChat, endChat, sendMessage)
  * read from this context instead of calling store action stubs.
  *
- * Pure data (isChatting, chatMessages, etc.) still comes from useStore.
+ * Pure data (isChatting, chatMessages, etc.) still comes from useUiStore.
  */
 export const SceneContext = React.createContext<SceneManager | null>(null);
 

@@ -17,7 +17,7 @@ export class GeminiProvider implements LLMProvider {
   ): Promise<LLMResponse> {
     const contents = this.mapMessagesToGemini(messages);
 
-    const agencyTools: Tool[] | undefined = tools ? [{
+    const systemTools: Tool[] | undefined = tools ? [{
       functionDeclarations: tools.map(t => ({
         name: t.function.name,
         description: t.function.description,

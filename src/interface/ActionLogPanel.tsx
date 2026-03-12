@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useAgencyStore, DebugLogEntry } from '../integration/store/agencyStore'
+import { useCoreStore, DebugLogEntry } from '../integration/store/coreStore'
 import { getAgentSet } from '../data/agents'
 import { ChevronDown, ChevronRight, MessageSquare, Terminal, Eye, Zap, Copy, Check, Download, Filter } from 'lucide-react'
 
@@ -34,7 +34,7 @@ const CopyButton: React.FC<{ text: string }> = ({ text }) => {
 
 const DebugEntryView: React.FC<{ entry: DebugLogEntry }> = ({ entry }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const selectedAgentSetId = useAgencyStore((s) => s.selectedAgentSetId);
+    const selectedAgentSetId = useCoreStore((s) => s.selectedAgentSetId);
     const agents = getAgentSet(selectedAgentSetId).agents;
     const agent = agents.find(a => a.index === entry.agentIndex);
 
@@ -254,7 +254,7 @@ ${entry.rawContent}
 };
 
 export function ActionLogPanel() {
-  const { setLogOpen, actionLog, debugLog, logFilterAgentIndex, phase, setFinalOutputOpen, selectedAgentSetId } = useAgencyStore()
+  const { setLogOpen, actionLog, debugLog, logFilterAgentIndex, phase, setFinalOutputOpen, selectedAgentSetId } = useCoreStore()
   const agents = getAgentSet(selectedAgentSetId).agents;
   const [activeTab, setActiveTab] = useState<'activity' | 'technical'>('technical')
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false)

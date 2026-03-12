@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
-import { useAgencyStore, type Task, type TaskStatus } from '../integration/store/agencyStore'
-import { getActiveAgentSet } from '../integration/store/agencyStore'
+import { useCoreStore, type Task, type TaskStatus } from '../integration/store/coreStore'
+import { getActiveAgentSet } from '../integration/store/coreStore'
 import { ChevronDown, ChevronRight, Trash2, MessageSquareWarning } from 'lucide-react'
 import DeleteTaskModal from './DeleteTaskModal'
-import { useStore } from '../integration/store/useStore'
+import { useUiStore } from '../integration/store/uiStore'
 
 const COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: 'scheduled',   label: 'Scheduled'   },
@@ -43,8 +43,8 @@ function renderAgentTag(agentIndex: number) {
 function TaskCard({ task }: { task: Task; key?: string }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const { removeTask } = useAgencyStore()
-  const { setSelectedNpc } = useStore()
+  const { removeTask } = useCoreStore()
+  const { setSelectedNpc } = useUiStore()
 
   // For visual representation, if on_hold, we "virtualize" the client being assigned
   const effectiveAgentIds = task.status === 'on_hold'
@@ -124,7 +124,7 @@ function TaskCard({ task }: { task: Task; key?: string }) {
 }
 
 export function KanbanPanel({ height = 320 }: KanbanPanelProps) {
-  const { tasks } = useAgencyStore()
+  const { tasks } = useCoreStore()
 
   return (
     <div

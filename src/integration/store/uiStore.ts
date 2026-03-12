@@ -2,13 +2,13 @@
 import { create } from 'zustand';
 import { CharacterState } from '../../types';
 import { DEFAULT_AGENT_SET_ID, getAgentSet } from '../../data/agents';
-import { useAgencyStore } from './agencyStore';
+import { useCoreStore } from './coreStore';
 
-export const useStore = create<CharacterState>()(
+export const useUiStore = create<CharacterState>()(
   (set) => ({
     isThinking: false,
     instanceCount: getAgentSet(
-      useAgencyStore.getState().selectedAgentSetId ?? DEFAULT_AGENT_SET_ID
+      useCoreStore.getState().selectedAgentSetId ?? DEFAULT_AGENT_SET_ID
     ).agents.length,
 
     selectedNpcIndex: null,
@@ -67,8 +67,8 @@ export const useStore = create<CharacterState>()(
 );
 
 // Keep instanceCount in sync whenever the active agent set changes
-useAgencyStore.subscribe((state, prevState) => {
+useCoreStore.subscribe((state, prevState) => {
   if (state.selectedAgentSetId !== prevState.selectedAgentSetId) {
-    useStore.getState().setInstanceCount(getAgentSet(state.selectedAgentSetId).agents.length);
+    useUiStore.getState().setInstanceCount(getAgentSet(state.selectedAgentSetId).agents.length);
   }
 });

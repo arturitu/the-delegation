@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import UIOverlay from './UIOverlay';
 import InspectorPanel from './InspectorPanel';
 import { Play, Pause, Maximize2, Minimize2, Users } from 'lucide-react';
-import { useAgencyStore } from '../integration/store/agencyStore';
-import { useStore } from '../integration/store/useStore';
+import { useCoreStore } from '../integration/store/coreStore';
+import { useUiStore } from '../integration/store/uiStore';
 import { getAgentSet } from '../data/agents';
 import AgentSetPickerModal from './AgentSetPickerModal';
 
@@ -14,13 +14,13 @@ interface SimulationViewProps {
 }
 
 const SimulationView: React.FC<SimulationViewProps> = ({ canvasRef, isFullscreen, setIsFullscreen }) => {
-  const isPaused = useAgencyStore((s) => s.isPaused);
-  const setPaused = useAgencyStore((s) => s.setPaused);
-  const pauseOnCall = useAgencyStore((s) => s.pauseOnCall);
-  const actionLog = useAgencyStore((s) => s.actionLog);
-  const selectedNpcIndex = useStore((s) => s.selectedNpcIndex);
+  const isPaused = useCoreStore((s) => s.isPaused);
+  const setPaused = useCoreStore((s) => s.setPaused);
+  const pauseOnCall = useCoreStore((s) => s.pauseOnCall);
+  const actionLog = useCoreStore((s) => s.actionLog);
+  const selectedNpcIndex = useUiStore((s) => s.selectedNpcIndex);
   const isPlaying = !isPaused;
-  const selectedAgentSetId = useAgencyStore((s) => s.selectedAgentSetId);
+  const selectedAgentSetId = useCoreStore((s) => s.selectedAgentSetId);
 
   const activeSet = getAgentSet(selectedAgentSetId);
   const agentCount = activeSet.agents.length - 1; // Exclude player

@@ -10,8 +10,8 @@ import { WorldManager } from './world/WorldManager';
 import { DriverManager } from './drivers/DriverManager';
 import { InputManager } from './input/InputManager';
 import { PLAYER_INDEX, NPC_START_INDEX, getAgentSet } from '../data/agents';
-import { useStore } from '../integration/store/useStore';
-import { useAgencyStore, getActiveAgentSet } from '../integration/store/agencyStore';
+import { useUiStore } from '../integration/store/uiStore';
+import { useCoreStore, getActiveAgentSet } from '../integration/store/coreStore';
 import { AgentBehavior, ChatMessage } from '../types';
 import { BUBBLE_Y_OFFSET } from './constants';
 
@@ -30,8 +30,8 @@ export class SceneManager {
   // Track which NPC is selected for camera follow
   private selectedIndex: number | null = null;
 
-  /** Optional handler that intercepts player→NPC messages for the agency system. */
-  private agencyHandler: ((npcIndex: number, text: string) => Promise<string | null>) | null = null;
+  /** Optional handler that intercepts player→NPC messages for the core system. */
+  private coreHandler: ((npcIndex: number, text: string) => Promise<string | null>) | null = null;
 
   private unsubs: (() => void)[] = [];
   private isDisposed = false;
@@ -65,7 +65,7 @@ export class SceneManager {
     await this.characterManager.load();
     if (this.isDisposed) return;
 
-    const state = useStore.getState();
+    const state = useUiStore.getState();
     this.characterManager.setInstanceCount(state.instanceCount);
 
     // Note: Stage.updateDimensions() removed, using static office
@@ -94,34 +94,34 @@ export class SceneManager {
       () => this.controller!.getCPUPositions(),
       () => this.controller!.getCount(),
       (index) => {
-        const storeState = useStore.getState();
+        const storeState = useUiStore.getState();
         if (storeState.isChatting) {
           this.endChat();
         }
         this.selectedIndex = index !== PLAYER_INDEX ? index : null;
-        useStore.getState().setSelectedNpc(this.selectedIndex);
+        useUiStore.getState().setSelectedNpc(this.selectedIndex);
       },
       (x, z) => playerDriver.onFloorClick(x, z),
-      (index, pos) => useStore.getState().setHoveredNpc(index, pos),
+      (index, pos) => useUiStore.getState().setHoveredNpc(index, pos),
       () => this.poiManager.getAllPois(),
-      (id, label, pos) => useStore.getState().setHoveredPoi(id, label, pos),
+      (id, label, pos) => useUiStore.getState().setHoveredPoi(id, label, pos),
       (id) => playerDriver.onPoiClick(id),
       this.worldManager.getOffice() ?? undefined,
       (point) => this.navMesh.isPointOnNavMesh(point),
-      () => useAgencyStore.getState().isPaused,
+      () => useCoreStore.getState().isPaused,
     );
 
     this.engine.renderer.setAnimationLoop(this.animate.bind(this));
 
     // React to store changes that affect the 3D world
-    const unsub = useStore.subscribe((s, prev) => {
+    const unsub = useUiStore.subscribe((s, prev) => {
       if (s.instanceCount !== prev.instanceCount) {
         this.controller?.setInstanceCount(s.instanceCount);
       }
 
       // Update world color if agent set changes
-      const agencyState = useAgencyStore.getState();
-      const currentSetId = agencyState.selectedAgentSetId;
+      const systemState = useCoreStore.getState();
+      const currentSetId = systemState.selectedAgentSetId;
       if (currentSetId !== this.lastAgentSetId) {
         this.lastAgentSetId = currentSetId;
         const activeSet = getAgentSet(currentSetId);
@@ -185,8 +185,8 @@ export class SceneManager {
 
     const target = npc.clone().addScaledVector(dir, 1.2);
 
-    // Stop NPC autonomous behavior by making them "busy" in the agency store sense
-    useStore.setState({
+    // Stop NPC autonomous behavior by making them "busy" in the core store sense
+    useUiStore.setState({
       selectedNpcIndex: npcIndex,
       isChatting: true,
       chatMessages: [],
@@ -213,14 +213,14 @@ export class SceneManager {
       this.controller!.getAgentStateBuffer()?.setWaypoint(npcIndex, -fx, -fz);
 
       // --- New: Pre-fill Chat if agent has pending approval ---
-      const agencyStore = useAgencyStore.getState();
-      const task = agencyStore.tasks.find(
+      const coreStore = useCoreStore.getState();
+      const task = coreStore.tasks.find(
         (t) => t.status === 'on_hold' && t.assignedAgentIds.includes(npcIndex),
       );
 
       if (task) {
         // Find the log entry for the approval request to get the question
-        const approvalLog = agencyStore.actionLog.find(l => l.taskId === task.id && l.action.toLowerCase().includes('approval'));
+        const approvalLog = coreStore.actionLog.find(l => l.taskId === task.id && l.action.toLowerCase().includes('approval'));
         const question = approvalLog ? approvalLog.action.replace(/^requested client approval — "/, '').replace(/"$/, '') : null;
 
         if (question) {
@@ -231,7 +231,7 @@ export class SceneManager {
             timestamp
           };
           // Switch Inspector to chat tab so the conversation is immediately visible
-          useStore.setState({ chatMessages: [approvalMsg], inspectorTab: 'chat' });
+          useUiStore.setState({ chatMessages: [approvalMsg], inspectorTab: 'chat' });
           return; // Skip default greeting
         }
       }
@@ -241,14 +241,14 @@ export class SceneManager {
   }
 
   public endChat(): void {
-    const { selectedNpcIndex } = useStore.getState();
+    const { selectedNpcIndex } = useUiStore.getState();
 
     // --- NEW: Release NPC Driver from chat ---
     if (selectedNpcIndex !== null) {
       this.driverManager?.getNpcDriver(selectedNpcIndex)?.setChatting(false);
     }
 
-    useStore.setState({
+    useUiStore.setState({
       isChatting: false,
       isTyping: false,
       isThinking: false,
@@ -265,17 +265,17 @@ export class SceneManager {
       this.controller.play(PLAYER_INDEX, 'idle');
     }
     this.selectedIndex = null;
-    useStore.getState().setSelectedNpc(null);
+    useUiStore.getState().setSelectedNpc(null);
   }
 
   public async sendMessage(text: string): Promise<void> {
-    const state = useStore.getState();
+    const state = useUiStore.getState();
     if (state.selectedNpcIndex === null || state.isThinking) return;
 
     const npcIndex = state.selectedNpcIndex;
 
     // 1. Immediately update UI with user message
-    useAgencyStore.setState((s) => {
+    useCoreStore.setState((s) => {
       const currentHistory = s.agentHistories[npcIndex] || [];
       return {
         agentHistories: {
@@ -285,40 +285,40 @@ export class SceneManager {
       };
     });
 
-    useStore.setState({
+    useUiStore.setState({
       isThinking: true,
       isTyping: false,
     });
 
     try {
-      // 2. Call agency system
+      // 2. Call core system
       let responseText: string | null = null;
-      if (this.agencyHandler) {
-        responseText = await this.agencyHandler(npcIndex, text);
+      if (this.coreHandler) {
+        responseText = await this.coreHandler(npcIndex, text);
       }
 
       if (responseText === null) {
         responseText = "Understood.";
       }
 
-      useStore.setState({ isThinking: false });
+      useUiStore.setState({ isThinking: false });
     } catch (err) {
       console.error('[SceneManager] sendMessage error:', err);
-      useStore.setState({ isThinking: false });
+      useUiStore.setState({ isThinking: false });
     }
   }
 
-  // ── Agency API ────────────────────────────────────────────────
+  // ── Core API ────────────────────────────────────────────────
 
   /**
-   * Register a handler that intercepts player→NPC messages for the agency system.
+   * Register a handler that intercepts player→NPC messages for the core system.
    * Return the response string to override the default conversationService,
    * or null to fall through to normal chat.
    */
-  public setAgencyHandler(
+  public setCoreHandler(
     handler: ((npcIndex: number, text: string) => Promise<string | null>) | null,
   ): void {
-    this.agencyHandler = handler;
+    this.coreHandler = handler;
   }
 
   /** Immediately trigger an NPC to pick a new autonomous action (e.g. wander away from work desk). */
@@ -379,7 +379,7 @@ export class SceneManager {
   private async _triggerNpcGreeting(npcIndex: number): Promise<void> {
     const agent = getActiveAgentSet().agents.find(a => a.index === npcIndex);
     if (!agent) return;
-    useStore.setState({ isThinking: true });
+    useUiStore.setState({ isThinking: true });
     try {
       // Simplified operational greeting
       const text = `Hello. I am the ${agent.role}. How can I help you with our current objectives?`;
@@ -388,10 +388,10 @@ export class SceneManager {
         text,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-      useStore.setState({ chatMessages: [msg], isThinking: false });
+      useUiStore.setState({ chatMessages: [msg], isThinking: false });
     } catch (err) {
       console.error('[SceneManager] greeting error:', err);
-      useStore.setState({ isThinking: false });
+      useUiStore.setState({ isThinking: false });
     }
   }
 
@@ -406,14 +406,14 @@ export class SceneManager {
     // Only update the renderer buffer if we are not actively dragging a panel.
     // This avoids expensive GPU reallocations during the drag, while the
     // CSS-driven sizing (100% width/height) handles the visual stretch.
-    if (!useAgencyStore.getState().isResizing) {
+    if (!useCoreStore.getState().isResizing) {
       this.engine.onResize(w, h);
     }
   }
 
   private animate() {
     this.engine.timer.update();
-    const isPaused = useAgencyStore.getState().isPaused;
+    const isPaused = useCoreStore.getState().isPaused;
 
     // When paused: update camera controls so orbiting still works, then render
     // the frozen frame and bail — no GPU compute, no path/driver updates.
@@ -434,7 +434,7 @@ export class SceneManager {
     this.controller?.syncFromGPU(this.engine.renderer).then((positions) => {
       if (!positions || !this.controller) return;
       // Guard: if the scene was paused while the readback was in-flight, discard
-      if (useAgencyStore.getState().isPaused) return;
+      if (useCoreStore.getState().isPaused) return;
       this.controller.updatePaths(positions);
       this.driverManager?.update(positions, delta);
       this.updateTransparency(positions, delta);
@@ -446,7 +446,7 @@ export class SceneManager {
     this.stage.setFollowTarget(followPos);
 
     // 4. NPC screen-space bubble position
-    const { selectedNpcIndex, setSelectedPosition, selectedPosition } = useStore.getState();
+    const { selectedNpcIndex, setSelectedPosition, selectedPosition } = useUiStore.getState();
     const npcScreenPositions: Record<number, { x: number; y: number }> = {};
     const rect = this.container.getBoundingClientRect();
 
@@ -464,7 +464,7 @@ export class SceneManager {
           npcScreenPositions[i] = { x: nextX, y: nextY };
         }
       }
-      useStore.setState({ npcScreenPositions });
+      useUiStore.setState({ npcScreenPositions });
     }
 
     if (selectedNpcIndex !== null && npcScreenPositions[selectedNpcIndex]) {
@@ -481,7 +481,7 @@ export class SceneManager {
     }
 
     // 5. Chat camera mode
-    const { isChatting } = useStore.getState();
+    const { isChatting } = useUiStore.getState();
     const playerMoving = this.controller?.getAgentState(PLAYER_INDEX) === AgentBehavior.GOTO;
     this.stage.setChatMode(isChatting, playerMoving);
 

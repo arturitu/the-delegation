@@ -27,7 +27,7 @@ import { DRACO_LIB_PATH } from '../constants';
 import { AgentStateBuffer } from '../behavior/AgentStateBuffer';
 import { ExpressionBuffer } from '../behavior/ExpressionBuffer';
 import { PLAYER_INDEX } from '../../data/agents';
-import { getActiveAgentSet } from '../../integration/store/agencyStore';
+import { getActiveAgentSet } from '../../integration/store/coreStore';
 import { PoiManager } from '../world/PoiManager';
 
 export class CharacterManager {

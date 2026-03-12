@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { useStore } from '../integration/store/useStore';
+import { useUiStore } from '../integration/store/uiStore';
 import { useSceneManager } from '../simulation/SceneContext';
-import { useAgencyStore } from '../integration/store/agencyStore';
+import { useCoreStore } from '../integration/store/coreStore';
 import { useChatAvailability } from '../integration/hooks/useChatAvailability';
 import AgentView from './AgentView';
 import ProjectView from './ProjectView';
@@ -16,9 +16,9 @@ interface InspectorPanelProps {
 }
 
 const InspectorPanel: React.FC<InspectorPanelProps> = ({ isFloating }) => {
-  const { selectedNpcIndex, isChatting } = useStore();
+  const { selectedNpcIndex, isChatting } = useUiStore();
   const scene = useSceneManager();
-  const { phase, setFinalOutputOpen, tasks, selectedAgentSetId } = useAgencyStore();
+  const { phase, setFinalOutputOpen, tasks, selectedAgentSetId } = useCoreStore();
   const agents = getAgentSet(selectedAgentSetId).agents;
   const { canChat, reason } = useChatAvailability(selectedNpcIndex);
   const prevCanChat = useRef(canChat);

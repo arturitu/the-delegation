@@ -1,6 +1,6 @@
-import { useAgencyStore } from './store/agencyStore';
-import { AgentFunctionCall } from './agencyService';
-import { getActiveAgentSet } from './store/agencyStore';
+import { useCoreStore } from './store/coreStore';
+import { AgentFunctionCall } from './coreService';
+import { getActiveAgentSet } from './store/coreStore';
 
 export class ToolHandlerService {
   /**
@@ -15,7 +15,7 @@ export class ToolHandlerService {
     callerIndex: number,
     scene: { setNpcWorking: (index: number, working: boolean) => void } | null
   ): boolean {
-    const store = useAgencyStore.getState();
+    const store = useCoreStore.getState();
 
     switch (fn.name) {
       case 'propose_task': {

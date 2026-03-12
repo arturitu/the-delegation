@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useStore } from '../integration/store/useStore';
-import { useAgencyStore } from '../integration/store/agencyStore';
+import { useUiStore } from '../integration/store/uiStore';
+import { useCoreStore } from '../integration/store/coreStore';
 import { Maximize2, KeyRound, Info, Zap, ZapOff, Play } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import InfoModal from './InfoModal';
@@ -10,8 +10,8 @@ import packageJson from '../../package.json';
 const version = packageJson.version;
 
 const Header: React.FC = () => {
-  const { llmConfig, isBYOKOpen, setBYOKOpen } = useStore();
-  const { pauseOnCall, togglePauseOnCall, isPaused, setPaused } = useAgencyStore();
+  const { llmConfig, isBYOKOpen, setBYOKOpen } = useUiStore();
+  const { pauseOnCall, togglePauseOnCall, isPaused, setPaused } = useCoreStore();
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const hasKey = !!llmConfig.apiKey;
 

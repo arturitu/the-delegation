@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { useAgencyStore } from '../integration/store/agencyStore';
+import { useCoreStore } from '../integration/store/coreStore';
 import { ScrollText, RefreshCcw, Users } from 'lucide-react';
 import AgentSetPickerModal from './AgentSetPickerModal';
 import ResetModal from './ResetModal';
 import { useSceneManager } from '../simulation/SceneContext';
-import { abortAllCalls } from '../integration/agencyService';
+import { abortAllCalls } from '../integration/coreService';
 import { getAgentSet } from '../data/agents';
 
 const ProjectView: React.FC = () => {
@@ -14,7 +14,7 @@ const ProjectView: React.FC = () => {
     actionLog,
     selectedAgentSetId,
     resetProject,
-  } = useAgencyStore();
+  } = useCoreStore();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const scene = useSceneManager();
@@ -27,7 +27,7 @@ const ProjectView: React.FC = () => {
     abortAllCalls();
     // 2. Reset the 3D scene (teleport agents, clear chat)
     scene?.resetScene();
-    // 3. Clear agency state
+    // 3. Clear project state
     resetProject();
     setIsResetModalOpen(false);
   };

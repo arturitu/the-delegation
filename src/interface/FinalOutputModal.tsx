@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
-import { useAgencyStore } from '../integration/store/agencyStore'
+import { useCoreStore } from '../integration/store/coreStore'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 export function FinalOutputModal() {
-  const { isFinalOutputOpen, setFinalOutputOpen, finalOutput } = useAgencyStore()
+  const { isFinalOutputOpen, setFinalOutputOpen, finalOutput } = useCoreStore()
   const [copied, setCopied] = useState(false)
 
   if (!isFinalOutputOpen || !finalOutput) return null
@@ -31,7 +31,7 @@ export function FinalOutputModal() {
               Your Prompt is Ready
             </h2>
             <p className="text-[11px] text-zinc-400 mt-0.5">
-              Crafted by your agency team
+              Crafted by your agentic team
             </p>
           </div>
           <button

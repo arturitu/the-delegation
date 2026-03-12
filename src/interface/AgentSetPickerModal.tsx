@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, AlertTriangle, Users } from 'lucide-react';
 import { AGENT_SETS, AgentSet } from '../data/agents';
-import { useAgencyStore } from '../integration/store/agencyStore';
+import { useCoreStore } from '../integration/store/coreStore';
 import { useSceneManager } from '../simulation/SceneContext';
-import { abortAllCalls } from '../integration/agencyService';
+import { abortAllCalls } from '../integration/coreService';
 import ResetModal from './ResetModal';
 
 interface AgentSetPickerModalProps {
@@ -86,7 +86,7 @@ const AgentSetPickerModal: React.FC<AgentSetPickerModalProps> = ({
   onClose,
   hasActiveProject = false,
 }) => {
-  const { selectedAgentSetId, setAgentSet } = useAgencyStore();
+  const { selectedAgentSetId, setAgentSet } = useCoreStore();
   const [pendingSetId, setPendingSetId] = useState<string>(selectedAgentSetId);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const scene = useSceneManager();

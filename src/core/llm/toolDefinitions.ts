@@ -1,6 +1,6 @@
 import { LLMToolDefinition } from './types';
 
-export const AGENCY_TOOLS: LLMToolDefinition[] = [
+export const CORE_TOOLS: LLMToolDefinition[] = [
   {
     type: 'function',
     function: {

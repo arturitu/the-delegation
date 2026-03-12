@@ -1,16 +1,16 @@
 import { useEffect, useRef } from 'react'
 import { useSceneManager } from '../../simulation/SceneContext'
-import { useAgencyStore, type Task } from '../store/agencyStore'
-import { useStore } from '../store/useStore'
+import { useCoreStore, type Task } from '../store/coreStore'
+import { useUiStore } from '../store/uiStore'
 import {
   callAgent,
   callOrchestrator,
   callBoardroomAgent,
   type AgentFunctionCall,
-} from '../agencyService'
+} from '../coreService'
 import { ToolHandlerService } from '../toolHandlerService'
 import { getAgent } from '../../data/agents'
-import { getActiveAgentSet } from '../store/agencyStore'
+import { getActiveAgentSet } from '../store/coreStore'
 
 // ── Constants ─────────────────────────────────────────────────
 const ORCHESTRATOR_INDEX = 1 // Orchestrator
@@ -21,7 +21,7 @@ const randomBetween = (min: number, max: number) =>
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
 // ─────────────────────────────────────────────────────────────
-export function useAgencyOrchestrator() {
+export function useCoreOrchestrator() {
   const scene = useSceneManager()
   const sceneRef = useRef(scene)
   useEffect(() => { sceneRef.current = scene }, [scene])
@@ -56,7 +56,7 @@ export function useAgencyOrchestrator() {
 
   // ── Check if all tasks done → trigger AM to wrap up ──────────
   const checkAllTasksDone = async () => {
-    const store = useAgencyStore.getState()
+    const store = useCoreStore.getState()
     if (store.phase !== 'working' && store.phase !== 'awaiting_approval') return
 
     // Check if ALL tasks are done (if tasks is empty, it's also "all done" if we were working)
@@ -101,7 +101,7 @@ export function useAgencyOrchestrator() {
     await sleep(randomBetween(1500, 3000))
 
     // Programmatically start the task (replaces the old execute_work LLM call)
-    const store = useAgencyStore.getState()
+    const store = useCoreStore.getState()
     store.updateTaskStatus(task.id, 'in_progress')
     store.addLogEntry({
       agentIndex,
@@ -134,7 +134,7 @@ export function useAgencyOrchestrator() {
 
   // ── Multi-agent boardroom task ────────────────────────────────
   const runBoardroomTask = async (task: Task) => {
-    const store = useAgencyStore.getState()
+    const store = useCoreStore.getState()
     const agents = task.assignedAgentIds
 
     store.addLogEntry({
@@ -215,12 +215,12 @@ export function useAgencyOrchestrator() {
     }
   }
 
-  // ── Agency message handler (intercepts player→NPC chat) ───────
-  const handleAgencyMessage = async (
+  // ── Core message handler (intercepts player→NPC chat) ───────
+  const handleCoreMessage = async (
     npcIndex: number,
     text: string,
   ): Promise<string | null> => {
-    const store = useAgencyStore.getState()
+    const store = useCoreStore.getState()
 
     // ---- Orchestrator: always route through agency service ----
     if (npcIndex === ORCHESTRATOR_INDEX) {
@@ -318,10 +318,10 @@ export function useAgencyOrchestrator() {
   useEffect(() => {
     if (!scene) return
 
-    scene.setAgencyHandler(handleAgencyMessage)
+    scene.setCoreHandler(handleCoreMessage)
 
     // Watch for new scheduled tasks and dispatch them
-    const unsub = useAgencyStore.subscribe((s, prev) => {
+    const unsub = useCoreStore.subscribe((s, prev) => {
       // Check if tasks changed status or were removed, making project ready
       const tasksChanged = s.tasks.some((t, i) => t.status !== prev.tasks[i]?.status) ||
                            s.tasks.length !== prev.tasks.length;
@@ -341,7 +341,7 @@ export function useAgencyOrchestrator() {
       if (newScheduled.length > 0) {
         setTimeout(() => {
           // Re-verify status before dispatching to ensure idempotency after the delay
-          const currentStore = useAgencyStore.getState();
+          const currentStore = useCoreStore.getState();
           for (const task of newScheduled) {
             const currentTask = currentStore.tasks.find(t => t.id === task.id);
             const agentIndex = task.assignedAgentIds[0];
@@ -357,7 +357,7 @@ export function useAgencyOrchestrator() {
       // Exit chat mode only when a brand-new task (scheduled) starts for the chatted NPC.
       // Do NOT close chat on on_hold → in_progress (approval resume) — the user should
       // see the agent's acknowledgment reply before the chat closes naturally.
-      const { isChatting, selectedNpcIndex } = useStore.getState()
+      const { isChatting, selectedNpcIndex } = useUiStore.getState()
       if (isChatting && selectedNpcIndex !== null) {
         const justStarted = s.tasks.find(
           (t) =>
@@ -372,7 +372,7 @@ export function useAgencyOrchestrator() {
 
       // When project reaches 'done', close chat if the user is talking to a non-Orchestrator agent
       if (s.phase === 'done' && prev.phase !== 'done') {
-        const { isChatting: chatActive, selectedNpcIndex: selNpc } = useStore.getState()
+        const { isChatting: chatActive, selectedNpcIndex: selNpc } = useUiStore.getState()
         if (chatActive && selNpc !== null && selNpc !== ORCHESTRATOR_INDEX) {
           sceneRef.current?.endChat()
         }
@@ -380,7 +380,7 @@ export function useAgencyOrchestrator() {
     })
 
     return () => {
-      scene.setAgencyHandler(null)
+      scene.setCoreHandler(null)
       unsub()
     }
   }, [scene]) // eslint-disable-line react-hooks/exhaustive-deps
