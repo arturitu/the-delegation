@@ -4,16 +4,16 @@
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { SceneManager } from './three/SceneManager';
-import { SceneContext } from './three/SceneContext';
-import { useAgencyOrchestrator } from './hooks/useAgencyOrchestrator';
-import { useAgencyStore } from './store/agencyStore';
-import Header from './components/Header';
-import InspectorPanel from './components/InspectorPanel';
-import { ActionLogPanel } from './components/ActionLogPanel';
-import { KanbanPanel } from './components/KanbanPanel';
-import { FinalOutputModal } from './components/FinalOutputModal';
-import SimulationView from './components/SimulationView';
+import { SceneManager } from './simulation/SceneManager';
+import { SceneContext } from './simulation/SceneContext';
+import { useAgencyOrchestrator } from './integration/hooks/useAgencyOrchestrator';
+import { useAgencyStore } from './integration/store/agencyStore';
+import Header from './interface/Header';
+import InspectorPanel from './interface/InspectorPanel';
+import { ActionLogPanel } from './interface/ActionLogPanel';
+import { KanbanPanel } from './interface/KanbanPanel';
+import { FinalOutputModal } from './interface/FinalOutputModal';
+import SimulationView from './interface/SimulationView';
 
 /** Mounts inside SceneContext so useSceneManager() is available. */
 function AgencyOrchestrator() {

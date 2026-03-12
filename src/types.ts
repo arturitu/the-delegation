@@ -1,6 +1,6 @@
 import type * as THREE from 'three/webgpu';
 
-import { LLMConfig } from './services/llm/types';
+import { LLMConfig } from './core/llm/types';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system' | 'tool';
