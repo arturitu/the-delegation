@@ -42,6 +42,8 @@ export interface CharacterState {
   setSelectedPosition: (pos: { x: number; y: number } | null) => void;
   setHoveredNpc: (index: number | null, pos: { x: number; y: number } | null) => void;
   setHoveredPoi: (id: string | null, label: string | null, pos: { x: number; y: number } | null) => void;
+  setFullViewMessage: (msg: { role: string; content: string; agentName?: string } | null) => void;
+  fullViewMessage: { role: string; content: string; agentName?: string } | null;
   setLlmConfig: (config: Partial<LLMConfig>) => void;
 }
 

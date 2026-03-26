@@ -1,8 +1,10 @@
 import React from 'react';
+import { Cpu, HelpCircle, Globe, Check } from 'lucide-react';
 import { getAgentSet, getAllAgents, getAllCharacters } from '../data/agents';
 import { useCoreStore } from '../integration/store/coreStore';
 import { useTeamStore } from '../integration/store/teamStore';
 import { Avatar } from './components/Avatar';
+import { InfoModal } from './components/InfoModal';
 
 import { formatTokens } from './ProjectView';
 
@@ -12,8 +14,8 @@ interface AgentStatusPanelProps {
 
 const AgentStatusPanel: React.FC<AgentStatusPanelProps> = ({ agentIndex }) => {
   const { tasks } = useCoreStore();
-  const { selectedAgentSetId } = useTeamStore();
-  const system = getAgentSet(selectedAgentSetId);
+  const { selectedAgentSetId, customSystems } = useTeamStore();
+  const system = getAgentSet(selectedAgentSetId, customSystems);
   const agents = getAllAgents(system);
 
   const agent = agents.find(a => a.index === agentIndex);
@@ -22,6 +24,8 @@ const AgentStatusPanel: React.FC<AgentStatusPanelProps> = ({ agentIndex }) => {
   const activeTask = tasks.find(
     (t) => t.assignedAgentIds.includes(agentIndex) && t.status === 'in_progress'
   ) ?? null;
+
+  const [infoType, setInfoType] = React.useState<'patterns' | 'extra' | null>(null);
 
   const usage = useCoreStore.getState().agentTokenUsage[agentIndex] || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
 
@@ -53,15 +57,83 @@ const AgentStatusPanel: React.FC<AgentStatusPanelProps> = ({ agentIndex }) => {
         {/* Model */}
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Model</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">LLM Model</p>
             <div className="h-px flex-1 bg-zinc-100" />
           </div>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-zinc-50 rounded-lg border border-zinc-100/60 font-mono">
-            <p className="text-[11px] font-bold text-zinc-800 uppercase tracking-tighter">
+          <div className="inline-flex items-center px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-200/60 font-mono max-w-full shadow-sm">
+            <p className="text-[10px] font-black text-zinc-800 uppercase tracking-tighter truncate whitespace-nowrap">
               {agent.model}
             </p>
           </div>
         </div>
+
+        {/* 1. Core Orchestration - Fixed Capability */}
+        {agent.index !== 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Core System</p>
+              <div className="h-px flex-1 bg-zinc-100" />
+            </div>
+            <div className="inline-flex items-center px-3 py-1.5 bg-zinc-900 rounded-xl border border-zinc-900 max-w-full shadow-lg">
+              <div className="flex items-center gap-2 text-white">
+                <Cpu size={12} strokeWidth={3} />
+                <p className="text-[10px] font-black uppercase tracking-tighter truncate whitespace-nowrap">
+                  core-skill
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 2. Skill Pattern */}
+        {agent.pattern && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-1.5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Design Pattern</p>
+                <button 
+                  onClick={() => setInfoType('patterns')}
+                  className="text-zinc-300 hover:text-zinc-500 transition-colors"
+                >
+                  <HelpCircle size={12} />
+                </button>
+              </div>
+              <div className="h-px flex-1 bg-zinc-100" />
+            </div>
+            <div className="inline-flex items-center px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-200/60 max-w-full shadow-sm">
+              <p className="text-[10px] font-black text-zinc-800 uppercase tracking-tighter truncate whitespace-nowrap">
+                {agent.pattern}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* 3. Skills List (Excluding core-skill) */}
+        {agent.skills && agent.skills.filter(s => s !== 'core-skill').length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-1.5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Extra Skills</p>
+                <button 
+                  onClick={() => setInfoType('extra')}
+                  className="text-zinc-300 hover:text-zinc-500 transition-colors"
+                >
+                  <HelpCircle size={12} />
+                </button>
+              </div>
+              <div className="h-px flex-1 bg-zinc-100" />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {agent.skills.filter(s => s !== 'core-skill').map((skillId: string) => (
+                <div key={skillId} className="inline-flex items-center px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-200/60 max-w-full shadow-sm h-7">
+                  <span className="text-[10px] font-black text-zinc-600 uppercase tracking-tighter truncate whitespace-nowrap">
+                    {skillId}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {/* Token Usage */}
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -94,7 +166,7 @@ const AgentStatusPanel: React.FC<AgentStatusPanelProps> = ({ agentIndex }) => {
         </div>
       ) : (
         <div className="mb-6">
-          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400/50 mb-2">
+          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2">
             Status
           </p>
           <p className="text-sm text-zinc-300 leading-snug italic font-medium">
@@ -102,6 +174,24 @@ const AgentStatusPanel: React.FC<AgentStatusPanelProps> = ({ agentIndex }) => {
           </p>
         </div>
       )}
+
+      {/* Info Modals */}
+      <InfoModal 
+        isOpen={infoType === 'patterns'}
+        onClose={() => setInfoType(null)}
+        title="Skill Design Patterns"
+        description="Based on the Agent Design Kit (ADK), these patterns help structure how an agent processes information and uses tools. Patterns like Reviewer, Generator, and Pipeline provide proven templates for complex agentic workflows."
+        link="https://lavinigam.com/posts/adk-skill-design-patterns/"
+        linkText="Explore ADK Guide"
+      />
+      <InfoModal 
+        isOpen={infoType === 'extra'}
+        onClose={() => setInfoType(null)}
+        title="Extra Skills"
+        description="Based on the Agent Skills Open Standard, these are modular, portable capabilities that can be shared across different agentic systems. They allow for easy integration of specialized tools and knowledge."
+        link="https://agentskills.io/home"
+        linkText="View Open Standard"
+      />
     </div>
   );
 };

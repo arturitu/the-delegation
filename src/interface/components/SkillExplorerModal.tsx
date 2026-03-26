@@ -52,25 +52,45 @@ export const SkillExplorerModal: React.FC<SkillExplorerModalProps> = ({ isOpen, 
   if (!isOpen) return null;
 
   const fetchSkillContent = async (source: string, skillId: string) => {
-    // Try common branches
+    // 1. Strip provider prefix if present (e.g. "github/owner/repo" -> "owner/repo")
+    const sourceParts = source.split('/');
+    const repoPath = (sourceParts.length > 2 && (sourceParts[0] === 'github' || sourceParts[0] === 'github.com'))
+      ? sourceParts.slice(1).join('/')
+      : source;
+
+    // 2. Identify owner prefix (e.g. from "vercel-labs/skills" get "vercel")
+    const ownerName = repoPath.split('/')[0];
+    const ownerShortPrefix = ownerName.split('-')[0];
+    const skillIdWithoutPrefix = (ownerShortPrefix && skillId.startsWith(ownerShortPrefix + '-'))
+      ? skillId.substring(ownerShortPrefix.length + 1)
+      : null;
+
     const branches = ['main', 'master'];
-    // Try common paths
-    const paths = [
+    const basePaths = [
       `skills/${skillId}/SKILL.md`,
       `.agents/skills/${skillId}/SKILL.md`,
       `SKILL.md`
     ];
+    
+    if (skillIdWithoutPrefix) {
+      basePaths.unshift(`skills/${skillIdWithoutPrefix}/SKILL.md`);
+    }
+
+    const errors: string[] = [];
 
     for (const branch of branches) {
-      for (const path of paths) {
+      for (const path of basePaths) {
         try {
-          const url = `https://raw.githubusercontent.com/${source}/${branch}/${path}`;
+          const url = `https://raw.githubusercontent.com/${repoPath}/${branch}/${path}`;
           const res = await fetch(url);
           if (res.ok) return await res.text();
         } catch (e) {}
       }
     }
-    throw new Error('SKILL.md not found in common locations (/, skills/, .agents/skills/)');
+    
+    // Fallback search: If still not found, try searching the repo structure? 
+    // Usually too heavy, so we stop here with a clearer message.
+    throw new Error(`SKILL.md not found in ${repoPath}. Tried branches [${branches.join(', ')}] and paths [${basePaths.join(', ')}]`);
   };
 
   const handleImportUrl = async () => {
@@ -85,7 +105,7 @@ export const SkillExplorerModal: React.FC<SkillExplorerModalProps> = ({ isOpen, 
       
       const skill = SkillLoader.parseSkill(fileName, content, id);
       if (skill) {
-        SkillLoader.saveUserSkill(skill);
+        await SkillLoader.saveUserSkill(skill);
         setImportUrl('');
         alert('Skill imported successfully!');
       } else {
@@ -106,7 +126,7 @@ export const SkillExplorerModal: React.FC<SkillExplorerModalProps> = ({ isOpen, 
       const skill = SkillLoader.parseSkill(`${remote.skillId}/SKILL.md`, content, remote.skillId);
       
       if (skill) {
-        SkillLoader.saveUserSkill(skill);
+        await SkillLoader.saveUserSkill(skill);
         setDownloaded(prev => new Set(prev).add(remote.id));
       } else {
         alert('Could not parse the remote skill content.');
@@ -211,10 +231,18 @@ export const SkillExplorerModal: React.FC<SkillExplorerModalProps> = ({ isOpen, 
                         <span className="px-1.5 py-0.5 bg-zinc-100 text-zinc-500 rounded text-[9px] font-black uppercase">{skill.source.split('/')[1] || skill.source}</span>
                       </div>
                       <p className="text-xs text-zinc-500 font-medium mt-0.5 line-clamp-1">{skill.description || 'Community skill via skills.sh'}</p>
-                      <div className="flex items-center gap-2 mt-1 translate-y-0.5">
+                      <div className="flex items-center gap-3 mt-1.5">
                         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter flex items-center gap-1">
                           <Check size={10} className="text-zinc-300" /> {skill.installs.toLocaleString()} installs
                         </span>
+                        <a 
+                          href={`https://github.com/${skill.source.replace('github/', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-indigo-600 flex items-center gap-1 transition-colors"
+                        >
+                          <Globe size={10} /> View Source
+                        </a>
                       </div>
                     </div>
                   </div>

@@ -15,6 +15,7 @@ import { VisualConfigurator } from './interface/VisualConfigurator/VisualConfigu
 import { SceneContext } from './simulation/SceneContext';
 import { SceneManager } from './simulation/SceneManager';
 import { SkillExplorerModal } from './interface/components/SkillExplorerModal';
+import { MessageFullViewModal } from './interface/components/MessageFullViewModal';
 import { useUiStore } from './integration/store/uiStore';
 
 
@@ -132,6 +133,8 @@ const App: React.FC = () => {
           isOpen={useUiStore(s => s.isSkillExplorerOpen)} 
           onClose={() => useUiStore.getState().setSkillExplorerOpen(false)} 
         />
+
+        <MessageFullViewModal />
       </div>
     </SceneContext.Provider>
   );

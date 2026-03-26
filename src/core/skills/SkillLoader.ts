@@ -2,6 +2,49 @@ import yaml from 'js-yaml';
 import { AgentSkill, SkillMetadata } from './types';
 
 /**
+ * Internal IndexedDB helper for larger storage capacity than localStorage.
+ */
+class SkillDb {
+  private static DB_NAME = 'AgenticSkillsDB';
+  private static STORE_NAME = 'user_skills';
+  private static DB_VERSION = 1;
+
+  static async open(): Promise<IDBDatabase> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(this.STORE_NAME)) {
+          db.createObjectStore(this.STORE_NAME, { keyPath: 'id' });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  static async save(skill: AgentSkill): Promise<void> {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readwrite');
+      tx.objectStore(this.STORE_NAME).put(skill);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  static async getAll(): Promise<AgentSkill[]> {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.STORE_NAME, 'readonly');
+      const request = tx.objectStore(this.STORE_NAME).getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+}
+
+/**
  * SkillLoader
  * 
  * Responsible for discovering and parsing SKILL.md files at compile time (via Vite)
@@ -9,7 +52,6 @@ import { AgentSkill, SkillMetadata } from './types';
  */
 export class SkillLoader {
   private static skills: Map<string, AgentSkill> = new Map();
-  private static USER_SKILLS_KEY = 'user_skills_registry';
 
   /**
    * Initializes the loader.
@@ -17,7 +59,7 @@ export class SkillLoader {
   static async init() {
     this.skills.clear();
     await this.loadBuiltInSkills();
-    this.loadUserSkills();
+    await this.loadUserSkills();
   }
 
   /**
@@ -63,35 +105,42 @@ export class SkillLoader {
   }
 
   /**
-   * Loads custom skills saved in localStorage.
+   * Loads custom skills saved in IndexedDB.
    */
-  private static loadUserSkills() {
-    const saved = localStorage.getItem(this.USER_SKILLS_KEY);
-    if (saved) {
+  private static async loadUserSkills() {
+    // Migration from localStorage if needed
+    const oldSaved = localStorage.getItem('user_skills_registry');
+    if (oldSaved) {
       try {
-        const userSkills = JSON.parse(saved) as AgentSkill[];
-        userSkills.forEach(s => {
-          s.isUserSkill = true;
-          this.skills.set(s.id, s);
-        });
+        const legacySkills = JSON.parse(oldSaved) as AgentSkill[];
+        for (const s of legacySkills) {
+          await SkillDb.save({ ...s, isUserSkill: true });
+        }
+        localStorage.removeItem('user_skills_registry');
+        console.log('[SkillLoader] Migrated skills from localStorage to IndexedDB');
       } catch (e) {
-        console.error('[SkillLoader] Error loading user skills:', e);
+        console.error('[SkillLoader] Migration failed:', e);
       }
+    }
+
+    try {
+      const userSkills = await SkillDb.getAll();
+      userSkills.forEach(s => {
+        s.isUserSkill = true;
+        this.skills.set(s.id, s);
+      });
+    } catch (e) {
+      console.error('[SkillLoader] Error loading user skills from IndexedDB:', e);
     }
   }
 
   /**
-   * Saves a new skill to user local storage.
+   * Saves a new skill to IndexedDB.
    */
-  static saveUserSkill(skill: AgentSkill) {
-    const userSkills = Array.from(this.skills.values()).filter(s => s.isUserSkill);
-    const existingIndex = userSkills.findIndex(s => s.id === skill.id);
-    
-    if (existingIndex >= 0) userSkills[existingIndex] = { ...skill, isUserSkill: true };
-    else userSkills.push({ ...skill, isUserSkill: true });
-
-    localStorage.setItem(this.USER_SKILLS_KEY, JSON.stringify(userSkills));
-    this.skills.set(skill.id, { ...skill, isUserSkill: true });
+  static async saveUserSkill(skill: AgentSkill) {
+    const userSkill = { ...skill, isUserSkill: true };
+    await SkillDb.save(userSkill);
+    this.skills.set(skill.id, userSkill);
   }
 
   /**

@@ -1,5 +1,5 @@
 ---
-name: core-orchestration
+name: core-skill
 description: Core tools for task management, client approval, and project completion.
 tools:
   - name: propose_task

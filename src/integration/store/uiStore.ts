@@ -65,6 +65,9 @@ export const useUiStore = create<CharacterState>()(
       hoverPosition: pos,
       hoveredNpcIndex: null,
     }),
+    setFullViewMessage: (msg: { role: string; content: string; agentName?: string } | null) => 
+      set({ fullViewMessage: msg }),
+    fullViewMessage: null,
     setLlmConfig: (config) => set((s) => ({ llmConfig: { ...s.llmConfig, ...config } })),
   })
 );

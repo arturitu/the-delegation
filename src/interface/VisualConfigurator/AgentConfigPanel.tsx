@@ -1,6 +1,7 @@
-import { Cpu, Save, Shield, Target, Trash2, User, X, Check, Pipette, Globe } from 'lucide-react';
+import { Cpu, Save, Shield, Target, Trash2, User, X, Check, Pipette, Globe, HelpCircle } from 'lucide-react';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useUiStore } from '../../integration/store/uiStore';
+import { InfoModal } from '../components/InfoModal';
 import { AgentNode, AgenticSystem, USER_ID, USER_NAME, DEFAULT_MAX_ITERATIONS, getAllCharacters } from '../../data/agents';
 import { USER_COLOR, USER_COLOR_LIGHT, USER_COLOR_SOFT } from '../../theme/brand';
 import { useCoreStore } from '../../integration/store/coreStore';
@@ -35,6 +36,7 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
   const { saveCustomSystem } = useTeamStore();
 
   const [editData, setEditData] = useState<AgentNode>(agent);
+  const [infoType, setInfoType] = useState<'patterns' | 'extra' | null>(null);
   const isUser = agent.index === 0;
   const isLead = agent.index === 1;
 
@@ -137,7 +139,7 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
         <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block">{label}</label>
         {helpText && <InfoBubble text={helpText} />}
       </div>
-      <div className={inline ? "" : "px-1"}>{value}</div>
+      <div className={inline ? "" : "px-0.5"}>{value}</div>
     </div>
   );
 
@@ -195,14 +197,18 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
               )}
 
               {renderField('Name', <User size={12} />, isView ? (
-                <p className="text-sm font-bold text-zinc-900">{editData.name}</p>
+                <div className="inline-flex items-center px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-200/60 max-w-full shadow-sm">
+                  <p className="text-[10px] font-black text-zinc-800 uppercase tracking-tighter truncate whitespace-nowrap">
+                    {editData.name}
+                  </p>
+                </div>
               ) : (
                 <div className="space-y-1">
                   <input
                     type="text"
                     value={editData.name}
                     onChange={(e) => handleNameChange(e.target.value)}
-                    className={`w-full px-3 py-2 bg-zinc-50 border rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-black/5 ${nameCollision ? 'border-red-500 text-red-600' : 'border-zinc-200'
+                    className={`w-full px-3 py-2 bg-zinc-50 border rounded-xl text-[10px] font-black uppercase tracking-tighter focus:outline-none focus:ring-2 focus:ring-black/5 shadow-sm transition-all ${nameCollision ? 'border-red-500 text-red-600' : 'border-zinc-200'
                       }`}
                   />
                   {nameCollision && (
@@ -214,14 +220,16 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
               ), 'Limit characters to letters, numbers and spaces. The ID is auto-generated.')}
 
               {renderField('LLM Model', <Cpu size={12} />, isView ? (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 border border-zinc-200 rounded-lg text-xs font-mono text-zinc-600 w-fit">
-                  {editData.model || 'gemini-3-flash-preview'}
+                <div className="inline-flex items-center px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-200/60 max-w-full shadow-sm font-mono">
+                  <p className="text-[10px] font-black text-zinc-800 uppercase tracking-tighter truncate whitespace-nowrap">
+                    {editData.model || 'gemini-3-flash-preview'}
+                  </p>
                 </div>
               ) : (
                 <select
                   value={editData.model || 'gemini-3-flash-preview'}
                   onChange={(e) => updateDraft({ model: e.target.value })}
-                  className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-black/5 cursor-pointer"
+                  className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-tighter font-mono focus:outline-none focus:ring-2 focus:ring-black/5 cursor-pointer shadow-sm"
                 >
                   {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
@@ -231,7 +239,7 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
             {/* Content Group */}
             <div className="space-y-6">
               {renderField('Description', <Target size={12} />, isView ? (
-                <p className="text-xs text-zinc-600 leading-relaxed font-medium italic bg-zinc-50/50 p-3 rounded-xl border border-zinc-100/50">
+                <p className="text-xs text-zinc-600 leading-relaxed font-medium italic bg-zinc-50/50 p-3 rounded-xl border border-zinc-100/50 shadow-inner">
                   {editData.description || "No description provided."}
                 </p>
               ) : (
@@ -239,13 +247,13 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
                   type="text"
                   value={editData.description}
                   onChange={(e) => updateDraft({ description: e.target.value })}
-                  className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-black/5"
+                  className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-black/5 shadow-sm"
                   placeholder="Concise summary of capabilities..."
                 />
               ), 'A short summary of what this agent does best.')}
 
               {renderField('Instructions', <Shield size={12} />, isView ? (
-                <div className="bg-zinc-50/50 p-4 rounded-xl border border-zinc-100/50 min-h-[100px]">
+                <div className="bg-zinc-50/50 p-4 rounded-xl border border-zinc-100/50 min-h-[100px] shadow-inner">
                   <p className="text-xs text-zinc-600 leading-relaxed whitespace-pre-wrap font-medium">
                     {editData.instruction}
                   </p>
@@ -254,7 +262,7 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
                 <textarea
                   value={editData.instruction}
                   onChange={(e) => updateDraft({ instruction: e.target.value })}
-                  className="w-full h-48 px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-black/5 resize-none font-medium text-zinc-600"
+                  className="w-full h-48 px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-black/5 shadow-sm resize-none font-medium text-zinc-600"
                   placeholder="Core task, persona, and constraints..."
                 />
               ), 'Core guidelines and constraints for the agent.')}
@@ -262,16 +270,20 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
 
             {/* Hierarchy Group */}
             <div className="space-y-4 pt-4 border-t border-zinc-100">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300 mb-4">Flow & Hierarchy</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-4">Flow & Hierarchy</h4>
 
               <div className="grid grid-cols-1 gap-4">
                 {renderField('Next Step (Success)', null, isLead || isView ? (
-                  <div className="text-[11px] font-bold text-zinc-900 bg-zinc-50 px-2.5 py-1.5 rounded-lg border border-zinc-100 truncate">{allCharacters.find(c => c.id === editData.nextId)?.name || 'None'}</div>
+                  <div className="inline-flex items-center px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-200/60 max-w-full shadow-sm">
+                    <p className="text-[10px] font-black text-zinc-800 uppercase tracking-tighter truncate whitespace-nowrap">
+                      {allCharacters.find(c => c.id === editData.nextId)?.name || 'None'}
+                    </p>
+                  </div>
                 ) : (
                   <select
                     value={editData.nextId || ''}
                     onChange={(e) => updateDraft({ nextId: e.target.value })}
-                    className="w-full px-2 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-[11px] font-bold focus:outline-none cursor-pointer"
+                    className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-tighter focus:outline-none focus:ring-2 focus:ring-black/5 cursor-pointer shadow-sm"
                   >
                     <option value="">None</option>
                     {availableNext.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -281,12 +293,16 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 {renderField('Retry on fail', null, isLead || isView ? (
-                  <div className="text-[11px] font-bold text-zinc-900 bg-zinc-50 px-2.5 py-1.5 rounded-lg border border-zinc-100 truncate">{isLead ? (editData.retryId === editData.id ? 'Self' : 'N/A') : allCharacters.find(c => c.id === editData.retryId)?.name || 'None'}</div>
+                  <div className="inline-flex items-center px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-200/60 max-w-full shadow-sm">
+                    <p className="text-[10px] font-black text-zinc-800 uppercase tracking-tighter truncate whitespace-nowrap">
+                      {isLead ? (editData.retryId === editData.id ? 'Self' : 'N/A') : allCharacters.find(c => c.id === editData.retryId)?.name || 'None'}
+                    </p>
+                  </div>
                 ) : (
                   <select
                     value={editData.retryId || ''}
                     onChange={(e) => updateDraft({ retryId: e.target.value || undefined })}
-                    className="w-full px-2 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-[11px] font-bold focus:outline-none cursor-pointer"
+                    className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-tighter focus:outline-none focus:ring-2 focus:ring-black/5 cursor-pointer shadow-sm"
                   >
                     <option value="">None</option>
                     {availableRetry.map(c => <option key={c.id} value={c.id}>{c.id === agent.id ? 'Self' : c.name}</option>)}
@@ -294,12 +310,16 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
                 ))}
 
                 {!!editData.retryId && renderField('Max Retries', null, isView ? (
-                  <div className="text-[11px] font-bold text-zinc-900 bg-zinc-50 px-2.5 py-1.5 rounded-lg border border-zinc-100 truncate">{editData.maxIterations || DEFAULT_MAX_ITERATIONS}</div>
+                  <div className="inline-flex items-center px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-200/60 max-w-full shadow-sm">
+                    <p className="text-[10px] font-black text-zinc-800 uppercase tracking-tighter truncate whitespace-nowrap">
+                      {editData.maxIterations || DEFAULT_MAX_ITERATIONS}
+                    </p>
+                  </div>
                 ) : (
                   <select
                     value={editData.maxIterations || DEFAULT_MAX_ITERATIONS}
                     onChange={(e) => updateDraft({ maxIterations: parseInt(e.target.value) })}
-                    className="w-full px-2 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-[11px] font-bold focus:outline-none cursor-pointer"
+                    className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-tighter focus:outline-none focus:ring-2 focus:ring-black/5 cursor-pointer shadow-sm"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
                       <option key={n} value={n}>{n}</option>
@@ -313,34 +333,56 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
             <div className="space-y-6 pt-4 border-t border-zinc-100">
               <div className="flex items-center gap-1.5 px-1">
                 <Globe size={12} className="text-zinc-400" />
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300">Skills</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Skills</h4>
               </div>
 
-              {/* Skill Design Patterns (ADK) */}
+              {/* 1. Core System - Moved to top of skills group */}
+              {!isUser && (
+                <div className="space-y-1.5 px-1">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Cpu size={12} className="text-zinc-400" />
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Core System</label>
+                  </div>
+                  <div className="inline-flex items-center px-3 py-1.5 bg-zinc-900 rounded-xl border border-zinc-900 max-w-full shadow-lg">
+                    <div className="flex items-center gap-2 text-white">
+                      <Cpu size={12} strokeWidth={3} />
+                      <p className="text-[10px] font-black uppercase tracking-tighter truncate whitespace-nowrap">
+                        core-skill
+                      </p>
+                    </div>
+                  </div>
+                  {!isView && (
+                    <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-tight px-1">
+                      Always enabled for system coordination.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* 2. Skill Design Patterns (ADK) */}
               <div className="space-y-1.5 px-1">
                 <div className="flex items-center justify-between">
-                  {renderField('Skill Design Patterns', null, null, undefined, true)}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] font-bold text-zinc-400">Based on</span>
-                  <a
-                    href="https://lavinigam.com/posts/adk-skill-design-patterns/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[9px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-600 hover:underline"
-                  >
-                    this post
-                  </a>
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block">Skill Design Patterns</label>
+                    <button 
+                      onClick={() => setInfoType('patterns')}
+                      className="text-zinc-300 hover:text-zinc-500 transition-colors"
+                    >
+                      <HelpCircle size={12} />
+                    </button>
+                  </div>
                 </div>
                 {isView ? (
-                  <div className="text-[11px] font-bold text-zinc-900 bg-zinc-50 px-2.5 py-1.5 rounded-lg border border-zinc-100 truncate capitalized">
-                    {editData.pattern || 'None'}
+                  <div className="inline-flex items-center px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-200/60 max-w-full shadow-sm">
+                    <p className="text-[10px] font-black text-zinc-800 uppercase tracking-tighter truncate whitespace-nowrap">
+                      {editData.pattern || 'Generalist'}
+                    </p>
                   </div>
                 ) : (
                   <select
                     value={editData.pattern || ''}
                     onChange={(e) => updateDraft({ pattern: e.target.value || undefined })}
-                    className="w-full px-2 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-[11px] font-bold focus:outline-none cursor-pointer"
+                    className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-tighter focus:outline-none focus:ring-2 focus:ring-black/5 cursor-pointer shadow-sm"
                   >
                     <option value="">None (Generalist)</option>
                     <option value="reviewer">Reviewer</option>
@@ -352,12 +394,18 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
                 )}
               </div>
 
-              {/* Extra Skills Selection */}
-              <div className="space-y-2">
+              {/* 3. Extra Skills Selection */}
+              <div className="space-y-4">
                 <div className="flex items-center justify-between px-1">
                   <div className="flex items-center gap-1.5">
                     <Check size={12} className="text-zinc-400" />
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Extra Skills</label>
+                    <button 
+                      onClick={() => setInfoType('extra')}
+                      className="text-zinc-300 hover:text-zinc-500 transition-colors"
+                    >
+                      <HelpCircle size={12} />
+                    </button>
                   </div>
                   {!isView && (
                     <button
@@ -370,33 +418,23 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5 px-1 pb-1">
-                  <span className="text-[9px] font-bold text-zinc-400">Based on</span>
-                  <a
-                    href="https://agentskills.io/home"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[9px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-600 hover:underline"
-                  >
-                    Agent Skills Open Standard
-                  </a>
-                </div>
-
                 <div className="px-1">
                   {isView ? (
-                    <div className="flex flex-wrap gap-1">
-                      {(editData.skills || []).length > 0 ? (
-                        editData.skills?.map(s => (
-                          <span key={s} className="px-2 py-0.5 bg-zinc-100 text-zinc-600 rounded text-[10px] font-bold border border-zinc-200">
-                            {s}
-                          </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(editData.skills || []).filter(s => s !== 'core-skill').length > 0 ? (
+                        (editData.skills || []).filter(s => s !== 'core-skill').map(s => (
+                          <div key={s} className="inline-flex items-center px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-200/60 max-w-full shadow-sm h-7">
+                            <span className="text-[10px] font-black text-zinc-600 uppercase tracking-tighter truncate whitespace-nowrap">
+                              {s}
+                            </span>
+                          </div>
                         ))
                       ) : (
-                        <span className="text-[10px] text-zinc-400 italic">No extra skills</span>
+                        <span className="text-[10px] text-zinc-400 font-black uppercase tracking-widest italic">No extra skills</span>
                       )}
                     </div>
                   ) : (
-                    <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-zinc-50 border border-zinc-100 rounded-xl">
+                    <div className="grid grid-cols-1 gap-1.5 max-h-60 overflow-y-auto p-3 bg-zinc-50/50 border border-zinc-100 rounded-2xl shadow-inner">
                       {SkillLoader.getAllSkills()
                         .filter(s => s.id !== 'core-skill' && s.metadata.pattern === undefined)
                         .map(skill => {
@@ -411,12 +449,19 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
                                   : [...current, skill.id];
                                 updateDraft({ skills: next });
                               }}
-                              className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all ${isSelected
-                                ? 'bg-zinc-900 border-zinc-900 text-white shadow-sm'
+                              className={`flex items-center justify-between px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-tighter border transition-all truncate whitespace-nowrap shadow-sm group ${isSelected
+                                ? 'bg-zinc-900 border-zinc-900 text-white'
                                 : 'bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400'
                                 }`}
+                              title={skill.metadata.name}
                             >
-                              {skill.metadata.name}
+                              <span className="truncate mr-2 font-black">{skill.metadata.name}</span>
+                              <div className={`shrink-0 w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${isSelected
+                                ? 'bg-zinc-900 border-zinc-900'
+                                : 'bg-zinc-50 border-zinc-200 group-hover:border-zinc-300'
+                                }`}>
+                                {isSelected && <Check size={10} strokeWidth={4} className="text-white" />}
+                              </div>
                             </button>
                           );
                         })}
@@ -429,7 +474,7 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
               <div className="pt-2">
                 <div className="flex items-center gap-1.5 px-1 mb-3">
                   <Cpu size={12} className="text-zinc-400" />
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300">Capabilities</h4>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Capabilities</h4>
                 </div>
                 <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center gap-2 opacity-60">
@@ -483,6 +528,24 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
           )}
         </div>
       )}
+
+      {/* Info Modals */}
+      <InfoModal 
+        isOpen={infoType === 'patterns'}
+        onClose={() => setInfoType(null)}
+        title="Skill Design Patterns"
+        description="Based on the Agent Design Kit (ADK), these patterns help structure how an agent processes information and uses tools. Patterns like Reviewer, Generator, and Pipeline provide proven templates for complex agentic workflows."
+        link="https://lavinigam.com/posts/adk-skill-design-patterns/"
+        linkText="Explore ADK Guide"
+      />
+      <InfoModal 
+        isOpen={infoType === 'extra'}
+        onClose={() => setInfoType(null)}
+        title="Extra Skills"
+        description="Based on the Agent Skills Open Standard, these are modular, portable capabilities that can be shared across different agentic systems. They allow for easy integration of specialized tools and knowledge."
+        link="https://agentskills.io/home"
+        linkText="View Open Standard"
+      />
     </div>
   );
 };

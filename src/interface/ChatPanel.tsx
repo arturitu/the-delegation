@@ -1,4 +1,4 @@
-import { Send } from 'lucide-react';
+import { Send, Maximize2 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -123,7 +123,7 @@ const ChatPanel: React.FC = () => {
 
               <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                 <div 
-                  className={`px-4 py-2.5 rounded-[20px] text-[14px] leading-relaxed shadow-sm border ${
+                  className={`px-4 py-2.5 rounded-[20px] text-[14px] leading-relaxed shadow-sm border overflow-hidden max-w-full break-words ${
                     msg.role === 'user' ? 'rounded-tr-none' : 'rounded-tl-none'
                   }`}
                   style={msg.role === 'user' ? {
@@ -137,20 +137,41 @@ const ChatPanel: React.FC = () => {
                   }}
                 >
                   {msg.role === 'assistant' ? (
-                    <div className="markdown-content">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <div className="markdown-content max-w-full overflow-hidden prose prose-sm">
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          pre: ({node, ...props}) => <pre className="max-w-full overflow-x-auto bg-zinc-900 text-white p-3 rounded-lg my-2" {...props} />,
+                          code: ({node, ...props}) => <code className="bg-zinc-100 px-1 rounded text-pink-600" {...props} />,
+                          img: ({node, ...props}) => <img className="max-w-full h-auto rounded-lg my-2" {...props} />
+                        }}
+                      >
                         {msg.content}
                       </ReactMarkdown>
                     </div>
                   ) : (
-                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                    <div className="whitespace-pre-wrap break-words">{msg.content}</div>
                   )}
                 </div>
 
-                <div className={`flex items-center gap-2 mt-2 px-1`}>
+                <div className={`flex items-center gap-2 mt-2 px-1 w-full ${msg.role === 'user' ? 'justify-end' : 'justify-between'}`}>
                   <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                     {msg.role === 'user' ? 'You' : (agent?.name?.split(' ')[0] || 'AI')}
                   </span>
+                  {msg.role === 'assistant' && (
+                    <button 
+                      onClick={() => useUiStore.getState().setFullViewMessage({
+                        role: msg.role,
+                        content: msg.content,
+                        agentName: agent?.name
+                      })}
+                      className="p-1 hover:bg-zinc-100 rounded-md transition-all text-zinc-400 hover:text-indigo-600 flex items-center gap-1 group"
+                      title="Open in Full View"
+                    >
+                      <span className="text-[8px] font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity">Full View</span>
+                      <Maximize2 size={10} strokeWidth={3} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
