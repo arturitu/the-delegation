@@ -21,7 +21,7 @@ WORKFLOW RULES:
 `.trim()
 
 // ─── Build system prompt for a given agent ────────────────────
-export function buildSystemPrompt(agentIndex: number, isBoardroom = false): string {
+export function buildSystemPrompt(agentIndex: number, isBoardroom = false, skillInstructions: string = ''): string {
   const activeSet = getActiveAgentSet()
   const agents = getAllAgents(activeSet)
   const agent = agents.find(a => a.index === agentIndex)
@@ -74,6 +74,7 @@ export function buildSystemPrompt(agentIndex: number, isBoardroom = false): stri
     '',
     WORKFLOW_RULES,
     boardroomNote,
+    skillInstructions ? `\n--- SKILL INSTRUCTIONS ---\n${skillInstructions}` : '',
   ]
     .join('\n')
     .trim()
@@ -117,7 +118,7 @@ export function buildTaskBoardSummary(tasks: Task[]): string {
 }
 
 // ─── Conversational chat prompt (no tools, no workflow) ───────
-export function buildChatSystemPrompt(agentIndex: number): string {
+export function buildChatSystemPrompt(agentIndex: number, skillInstructions: string = ''): string {
   const activeSet = getActiveAgentSet()
   const agents = getAllAgents(activeSet)
   const agent = agents.find(a => a.index === agentIndex)
@@ -149,6 +150,7 @@ export function buildChatSystemPrompt(agentIndex: number): string {
     '- IF the client provides the final sign-off or enough info that your work is actually DONE: call "complete_task" with your final output (max 500 words). The chat session will also terminate.',
     '- Keep replies concise (2-4 sentences) unless the client asks for detail.',
     '- Do NOT propose new tasks or execute work via tools here (unless you are the Orchestrator starting the project).',
+    skillInstructions ? `\n--- SKILL INSTRUCTIONS ---\n${skillInstructions}` : '',
   ]
     .filter(Boolean)
     .join('\n')

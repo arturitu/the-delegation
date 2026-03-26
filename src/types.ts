@@ -28,6 +28,9 @@ export interface CharacterState {
   byokError: string | null;
   setBYOKOpen: (open: boolean, error?: string | null) => void;
 
+  isSkillExplorerOpen: boolean;
+  setSkillExplorerOpen: (open: boolean) => void;
+
   // BYOK LLM Configuration
   llmConfig: LLMConfig;
 

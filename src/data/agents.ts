@@ -19,6 +19,8 @@ export interface AgentNode {
   maxIterations?: number;
   position?: { x: number; y: number };
   subagents?: AgentNode[];
+  pattern?: string;
+  skills?: string[];
 }
 
 export interface AgenticSystem {
@@ -52,7 +54,8 @@ export const AGENTIC_SETS: AgenticSystem[] = [
       instruction: 'Provide direct and concise answers.',
       color: '#7EACEA',
       model: 'gemini-3-flash-preview',
-      position: { x: 0, y: 150 }
+      position: { x: 0, y: 150 },
+      skills: ['core-skill']
     }
   },
 
@@ -74,6 +77,7 @@ export const AGENTIC_SETS: AgenticSystem[] = [
       model: 'gemini-3-flash-preview',
       nextId: 'writer',
       position: { x: 0, y: 150 },
+      skills: ['core-skill'],
       subagents: [
         {
           id: 'writer',
@@ -84,7 +88,8 @@ export const AGENTIC_SETS: AgenticSystem[] = [
           color: '#eab308',
           model: 'gemini-3-flash-preview',
           nextId: 'translator',
-          position: { x: 0, y: 400 }
+          position: { x: 0, y: 400 },
+          skills: ['core-skill']
         },
         {
           id: 'translator',
@@ -94,7 +99,8 @@ export const AGENTIC_SETS: AgenticSystem[] = [
           instruction: 'Translate the draft into professional Spanish.',
           color: '#22c55e',
           model: 'gemini-3-flash-preview',
-          position: { x: 0, y: 650 }
+          position: { x: 0, y: 650 },
+          skills: ['core-skill']
         }
       ]
     }
@@ -117,6 +123,7 @@ export const AGENTIC_SETS: AgenticSystem[] = [
       color: '#a855f7',
       model: 'gemini-3-flash-preview',
       position: { x: 0, y: 150 },
+      skills: ['core-skill'],
       subagents: [
         {
           id: 'designer',
@@ -160,6 +167,7 @@ export const AGENTIC_SETS: AgenticSystem[] = [
       model: 'gemini-3-flash-preview',
       nextId: 'reviewer',
       position: { x: 0, y: 150 },
+      skills: ['core-skill'],
       subagents: [
         {
           id: 'reviewer',
@@ -170,7 +178,9 @@ export const AGENTIC_SETS: AgenticSystem[] = [
           color: '#ef4444',
           model: 'gemini-3-flash-preview',
           retryId: 'coder',
-          position: { x: 0, y: 400 }
+          position: { x: 0, y: 400 },
+          pattern: 'reviewer',
+          skills: ['core-skill']
         }
       ]
     }
@@ -193,6 +203,7 @@ export const AGENTIC_SETS: AgenticSystem[] = [
       color: '#64748b',
       model: 'gemini-3-flash-preview',
       position: { x: 0, y: 150 },
+      skills: ['core-skill'],
       subagents: [
         {
           id: 'manager',

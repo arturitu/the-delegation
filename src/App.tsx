@@ -14,6 +14,8 @@ import SimulationView from './interface/SimulationView';
 import { VisualConfigurator } from './interface/VisualConfigurator/VisualConfigurator';
 import { SceneContext } from './simulation/SceneContext';
 import { SceneManager } from './simulation/SceneManager';
+import { SkillExplorerModal } from './interface/components/SkillExplorerModal';
+import { useUiStore } from './integration/store/uiStore';
 
 
 const App: React.FC = () => {
@@ -125,6 +127,11 @@ const App: React.FC = () => {
 
         {/* Final output — fixed viewport overlay */}
         <FinalOutputModal />
+
+        <SkillExplorerModal 
+          isOpen={useUiStore(s => s.isSkillExplorerOpen)} 
+          onClose={() => useUiStore.getState().setSkillExplorerOpen(false)} 
+        />
       </div>
     </SceneContext.Provider>
   );

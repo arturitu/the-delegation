@@ -1,7 +1,8 @@
 import { MemoryService } from '../context/MemoryService'
 import { LLMFactory } from '../core/llm/LLMFactory'
-import { CORE_TOOLS } from '../core/llm/toolDefinitions'
-import { LLMMessage } from '../core/llm/types'
+import { LLMMessage, LLMToolDefinition } from '../core/llm/types'
+import { SkillLoader } from '../core/skills/SkillLoader';
+import { AgentSkill } from '../core/skills/types';
 import {
   buildChatSystemPrompt,
   buildDynamicContext, buildSystemPrompt
@@ -118,10 +119,56 @@ export async function callAgent(params: {
   const activeSet = getActiveAgentSet();
   const agentData = getAllAgents(activeSet).find((a) => a.index === agentIndex);
 
-  // 1. Build context
+  // 1. Gather Tools and Instructions from Skills
+  const coreSkill = SkillLoader.getSkill('core-skill');
+  const patternSkill = agentData?.pattern ? SkillLoader.getSkill(agentData.pattern) : null;
+  const assignedSkills = (agentData?.skills || []).map(id => SkillLoader.getSkill(id)).filter(Boolean) as AgentSkill[];
+  
+  let skillInstructions = coreSkill?.instructions || '';
+  
+  const processSkill = (skill: AgentSkill, type: 'PATTERN' | 'EXTRA') => {
+    let block = `\n\n### ${type}: ${skill.metadata.name.toUpperCase()}\n${skill.instructions}`;
+    
+    // Inject References
+    if (skill.references && Object.keys(skill.references).length > 0) {
+      block += `\n\n#### REFERENCES:`;
+      for (const [name, content] of Object.entries(skill.references)) {
+        block += `\n- **${name}**:\n${content}\n`;
+      }
+    }
+
+    // Inject Assets
+    if (skill.assets && Object.keys(skill.assets).length > 0) {
+      block += `\n\n#### ASSETS:`;
+      for (const [name, content] of Object.entries(skill.assets)) {
+        block += `\n- **${name}**:\n${content}\n`;
+      }
+    }
+    return block;
+  };
+
+  if (patternSkill) {
+    skillInstructions += processSkill(patternSkill, 'PATTERN');
+  }
+
+  assignedSkills.forEach(s => {
+    skillInstructions += processSkill(s, 'EXTRA');
+  });
+
+  const allAvailableTools: LLMToolDefinition[] = [...(coreSkill?.metadata.tools || [])];
+  
+  if (patternSkill?.metadata.tools) {
+    allAvailableTools.push(...patternSkill.metadata.tools);
+  }
+
+  assignedSkills.forEach(s => {
+    if (s.metadata.tools) allAvailableTools.push(...s.metadata.tools);
+  });
+
+  // 2. Build context
   const fullSystemPrompt = chatMode
-    ? buildChatSystemPrompt(agentIndex)
-    : buildSystemPrompt(agentIndex, isBoardroom);
+    ? buildChatSystemPrompt(agentIndex, skillInstructions)
+    : buildSystemPrompt(agentIndex, isBoardroom, skillInstructions);
 
   const store = useCoreStore.getState();
   const currentTask = store.tasks.find(
@@ -138,7 +185,7 @@ export async function callAgent(params: {
     ? `${dynamicContext}\n\n---\nCLIENT MESSAGE:\n${userMessage}`
     : `${dynamicContext}\n\n---\nMESSAGE:\n${userMessage}`;
 
-  // 2. Get history from store with summarizing logic for long chats
+  // 3. Get history from store with summarizing logic for long chats
   let history = isBoardroom && boardroomTaskId
     ? (store.boardroomHistories[boardroomTaskId] || [])
     : (store.agentHistories[agentIndex] || []);
@@ -172,7 +219,7 @@ export async function callAgent(params: {
     { role: 'user', content: fullUserMessage }
   ];
 
-  // 3. Call LLM — using declarative tool permissions based on topology
+  // 4. Call LLM — using declarative tool permissions based on topology
   const isLead = agentData?.index === 1;
   const canDelegate = (agentData?.subagents?.length || 0) > 0;
   const hasRetry = !!agentData?.retryId;
@@ -191,7 +238,15 @@ export async function callAgent(params: {
     }
   }
 
-  const tools = CORE_TOOLS.filter((t) => allowedToolNames.has(t.function.name));
+  // Tools from extra skills are always allowed
+  const extraSkillToolNames = new Set<string>();
+  assignedSkills.forEach(s => {
+    s.metadata.tools?.forEach(t => extraSkillToolNames.add(t.function.name));
+  });
+
+  const tools = allAvailableTools.filter((t) => 
+    allowedToolNames.has(t.function.name) || extraSkillToolNames.has(t.function.name)
+  );
 
   // PAUSE BEFORE CALL (only when debug mode on)
   if (useCoreStore.getState().pauseOnCall) {

@@ -28,6 +28,9 @@ export const useUiStore = create<CharacterState>()(
     setBYOKOpen: (open: boolean, error: string | null = null) =>
       set({ isBYOKOpen: open, byokError: error }),
 
+    isSkillExplorerOpen: false,
+    setSkillExplorerOpen: (open: boolean) => set({ isSkillExplorerOpen: open }),
+
     llmConfig: (() => {
       try {
         const saved = localStorage.getItem('byok-config');

@@ -38,10 +38,6 @@ export function useChatAvailability(agentIndex: number | null): ChatAvailability
       if (agentIndex === ORCHESTRATOR_INDEX) return { canChat: true, reason: '' }
       return { canChat: false, reason: 'Waiting for project brief' }
 
-    case 'briefing':
-      if (agentIndex === ORCHESTRATOR_INDEX) return { canChat: true, reason: '' }
-      return { canChat: false, reason: 'Team is being briefed' }
-
     case 'working':
       // Approval flow always takes priority
       if (isApprovalAgent) return { canChat: true, reason: '' }

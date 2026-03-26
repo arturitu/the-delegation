@@ -2,6 +2,10 @@
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { SkillLoader } from './core/skills/SkillLoader';
+
+// Initialize core services
+SkillLoader.init();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

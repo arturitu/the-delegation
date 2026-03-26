@@ -1,5 +1,6 @@
-import { Cpu, Save, Shield, Target, Trash2, User, X, Check, Pipette } from 'lucide-react';
+import { Cpu, Save, Shield, Target, Trash2, User, X, Check, Pipette, Globe } from 'lucide-react';
 import React, { useState, useMemo, useEffect } from 'react';
+import { useUiStore } from '../../integration/store/uiStore';
 import { AgentNode, AgenticSystem, USER_ID, USER_NAME, DEFAULT_MAX_ITERATIONS, getAllCharacters } from '../../data/agents';
 import { USER_COLOR, USER_COLOR_LIGHT, USER_COLOR_SOFT } from '../../theme/brand';
 import { useCoreStore } from '../../integration/store/coreStore';
@@ -8,6 +9,8 @@ import { Avatar } from '../components/Avatar';
 import { ColorPicker } from './ColorPicker';
 import { InfoBubble } from './InfoBubble';
 import { CORE_TOOLS } from '../../core/llm/toolDefinitions';
+import { SkillLoader } from '../../core/skills/SkillLoader';
+import { AgentSkill } from '../../core/skills/types';
 import { getBrightness } from './colorUtils';
 
 interface AgentConfigPanelProps {
@@ -306,35 +309,152 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
               </div>
             </div>
 
-            {/* Capabilities Info */}
-            <div className="space-y-4 pt-4 border-t border-zinc-100">
-              <div className="flex items-center gap-1.5">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300">Capabilities</h4>
-                <InfoBubble text="Tools are enabled automatically based on the agent's position and connections." />
+            {/* Skills Group */}
+            <div className="space-y-6 pt-4 border-t border-zinc-100">
+              <div className="flex items-center gap-1.5 px-1">
+                <Globe size={12} className="text-zinc-400" />
+                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300">Skills</h4>
               </div>
-              <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center gap-2 opacity-60">
-                  <Check size={12} className="text-zinc-400" />
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase">Complete Task</span>
+
+              {/* Skill Design Patterns (ADK) */}
+              <div className="space-y-1.5 px-1">
+                <div className="flex items-center justify-between">
+                  {renderField('Skill Design Patterns', null, null, undefined, true)}
                 </div>
-                {(editData.subagents?.length || 0) > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Check size={12} className="text-zinc-900" />
-                    <span className="text-[10px] font-bold text-zinc-900 uppercase">Propose Task (Manager)</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-bold text-zinc-400">Based on</span>
+                  <a
+                    href="https://lavinigam.com/posts/adk-skill-design-patterns/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[9px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-600 hover:underline"
+                  >
+                    this post
+                  </a>
+                </div>
+                {isView ? (
+                  <div className="text-[11px] font-bold text-zinc-900 bg-zinc-50 px-2.5 py-1.5 rounded-lg border border-zinc-100 truncate capitalized">
+                    {editData.pattern || 'None'}
                   </div>
+                ) : (
+                  <select
+                    value={editData.pattern || ''}
+                    onChange={(e) => updateDraft({ pattern: e.target.value || undefined })}
+                    className="w-full px-2 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-[11px] font-bold focus:outline-none cursor-pointer"
+                  >
+                    <option value="">None (Generalist)</option>
+                    <option value="reviewer">Reviewer</option>
+                    <option value="generator">Generator</option>
+                    <option value="pipeline">Pipeline</option>
+                    <option value="tool-wrapper">Tool Wrapper</option>
+                    <option value="inversion">Inversion</option>
+                  </select>
                 )}
-                {editData.retryId === USER_ID && (
-                  <div className="flex items-center gap-2">
-                    <Check size={12} className="text-zinc-900" />
-                    <span className="text-[10px] font-bold text-zinc-900 uppercase">Human Approval (HITL)</span>
+              </div>
+
+              {/* Extra Skills Selection */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-1.5">
+                    <Check size={12} className="text-zinc-400" />
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Extra Skills</label>
                   </div>
-                )}
-                {editData.retryId && editData.retryId !== USER_ID && (
-                  <div className="flex items-center gap-2">
-                    <Check size={12} className="text-zinc-900" />
-                    <span className="text-[10px] font-bold text-zinc-900 uppercase">Request Revision (Critic)</span>
+                  {!isView && (
+                    <button
+                      onClick={() => useUiStore.getState().setSkillExplorerOpen(true)}
+                      className="flex items-center gap-1 px-2 py-1 bg-zinc-900 hover:bg-black text-[9px] font-black uppercase tracking-widest text-white rounded-lg transition-all active:scale-95 shadow-sm"
+                    >
+                      <Globe size={10} />
+                      + Add Skills
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 px-1 pb-1">
+                  <span className="text-[9px] font-bold text-zinc-400">Based on</span>
+                  <a
+                    href="https://agentskills.io/home"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[9px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-600 hover:underline"
+                  >
+                    Agent Skills Open Standard
+                  </a>
+                </div>
+
+                <div className="px-1">
+                  {isView ? (
+                    <div className="flex flex-wrap gap-1">
+                      {(editData.skills || []).length > 0 ? (
+                        editData.skills?.map(s => (
+                          <span key={s} className="px-2 py-0.5 bg-zinc-100 text-zinc-600 rounded text-[10px] font-bold border border-zinc-200">
+                            {s}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-[10px] text-zinc-400 italic">No extra skills</span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-zinc-50 border border-zinc-100 rounded-xl">
+                      {SkillLoader.getAllSkills()
+                        .filter(s => s.id !== 'core-skill' && s.metadata.pattern === undefined)
+                        .map(skill => {
+                          const isSelected = (editData.skills || []).includes(skill.id);
+                          return (
+                            <button
+                              key={skill.id}
+                              onClick={() => {
+                                const current = editData.skills || [];
+                                const next = isSelected
+                                  ? current.filter(id => id !== skill.id)
+                                  : [...current, skill.id];
+                                updateDraft({ skills: next });
+                              }}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all ${isSelected
+                                ? 'bg-zinc-900 border-zinc-900 text-white shadow-sm'
+                                : 'bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400'
+                                }`}
+                            >
+                              {skill.metadata.name}
+                            </button>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Capabilities Group */}
+              <div className="pt-2">
+                <div className="flex items-center gap-1.5 px-1 mb-3">
+                  <Cpu size={12} className="text-zinc-400" />
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300">Capabilities</h4>
+                </div>
+                <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center gap-2 opacity-60">
+                    <Check size={12} className="text-zinc-400" />
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase">Complete Task</span>
                   </div>
-                )}
+                  {(editData.subagents?.length || 0) > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Check size={12} className="text-zinc-900" />
+                      <span className="text-[10px] font-bold text-zinc-900 uppercase">Propose Task (Manager)</span>
+                    </div>
+                  )}
+                  {editData.retryId === USER_ID && (
+                    <div className="flex items-center gap-2">
+                      <Check size={12} className="text-zinc-900" />
+                      <span className="text-[10px] font-bold text-zinc-900 uppercase">Human Approval (HITL)</span>
+                    </div>
+                  )}
+                  {editData.retryId && editData.retryId !== USER_ID && (
+                    <div className="flex items-center gap-2">
+                      <Check size={12} className="text-zinc-900" />
+                      <span className="text-[10px] font-bold text-zinc-900 uppercase">Request Revision (Critic)</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </>
