@@ -67,73 +67,6 @@ const AgentStatusPanel: React.FC<AgentStatusPanelProps> = ({ agentIndex }) => {
           </div>
         </div>
 
-        {/* 1. Core Orchestration - Fixed Capability */}
-        {agent.index !== 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Core System</p>
-              <div className="h-px flex-1 bg-zinc-100" />
-            </div>
-            <div className="inline-flex items-center px-3 py-1.5 bg-zinc-900 rounded-xl border border-zinc-900 max-w-full shadow-lg">
-              <div className="flex items-center gap-2 text-white">
-                <Cpu size={12} strokeWidth={3} />
-                <p className="text-[10px] font-black uppercase tracking-tighter truncate whitespace-nowrap">
-                  core-skill
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 2. Skill Pattern */}
-        {agent.pattern && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="flex items-center gap-1.5">
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Design Pattern</p>
-                <button 
-                  onClick={() => setInfoType('patterns')}
-                  className="text-zinc-300 hover:text-zinc-500 transition-colors"
-                >
-                  <HelpCircle size={12} />
-                </button>
-              </div>
-              <div className="h-px flex-1 bg-zinc-100" />
-            </div>
-            <div className="inline-flex items-center px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-200/60 max-w-full shadow-sm">
-              <p className="text-[10px] font-black text-zinc-800 uppercase tracking-tighter truncate whitespace-nowrap">
-                {agent.pattern}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* 3. Skills List (Excluding core-skill) */}
-        {agent.skills && agent.skills.filter(s => s !== 'core-skill').length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="flex items-center gap-1.5">
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Extra Skills</p>
-                <button 
-                  onClick={() => setInfoType('extra')}
-                  className="text-zinc-300 hover:text-zinc-500 transition-colors"
-                >
-                  <HelpCircle size={12} />
-                </button>
-              </div>
-              <div className="h-px flex-1 bg-zinc-100" />
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {agent.skills.filter(s => s !== 'core-skill').map((skillId: string) => (
-                <div key={skillId} className="inline-flex items-center px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-200/60 max-w-full shadow-sm h-7">
-                  <span className="text-[10px] font-black text-zinc-600 uppercase tracking-tighter truncate whitespace-nowrap">
-                    {skillId}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
         {/* Token Usage */}
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -144,6 +77,77 @@ const AgentStatusPanel: React.FC<AgentStatusPanelProps> = ({ agentIndex }) => {
             <span className="text-zinc-700">{formatTokens(usage.promptTokens)} <span className="text-zinc-400 font-medium">input</span></span>
             <span className="text-zinc-300">+</span>
             <span className="text-zinc-700">{formatTokens(usage.completionTokens)} <span className="text-zinc-400 font-medium">output</span></span>
+          </div>
+        </div>
+
+        {/* SKILLS */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Skills</p>
+            <div className="h-px flex-1 bg-zinc-100" />
+          </div>
+
+          <div className="space-y-6">
+            {/* 1. Core Orchestration - Fixed Capability */}
+            {agent.index !== 0 && (
+              <div>
+                <div className="mb-2">
+                  <p className="text-[10px] text-zinc-400">core system</p>
+                </div>
+                <div className="inline-flex items-center px-3 py-1.5 bg-zinc-900 rounded-xl border border-zinc-900 max-w-full shadow-lg">
+                  <div className="flex items-center gap-2 text-white">
+                    <Cpu size={12} strokeWidth={3} />
+                    <p className="text-[10px] font-black uppercase tracking-tighter truncate whitespace-nowrap">
+                      core-skill
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 2. Skill Pattern */}
+            {agent.pattern && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <p className="text-[10px] text-zinc-400">skills design pattern</p>
+                  <button
+                    onClick={() => setInfoType('patterns')}
+                    className="text-zinc-300 hover:text-zinc-500 transition-colors"
+                  >
+                    <HelpCircle size={12} />
+                  </button>
+                </div>
+                <div className="inline-flex items-center px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-200/60 max-w-full shadow-sm">
+                  <p className="text-[10px] font-black text-zinc-800 uppercase tracking-tighter truncate whitespace-nowrap">
+                    {agent.pattern}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 3. Skills List (Excluding core-skill) */}
+            {agent.skills && agent.skills.filter(s => s !== 'core-skill').length > 0 && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <p className="text-[10px] text-zinc-400">extra skills</p>
+                  <button
+                    onClick={() => setInfoType('extra')}
+                    className="text-zinc-300 hover:text-zinc-500 transition-colors"
+                  >
+                    <HelpCircle size={12} />
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {agent.skills.filter(s => s !== 'core-skill').map((skillId: string) => (
+                    <div key={skillId} className="inline-flex items-center px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-200/60 max-w-full shadow-sm h-7">
+                      <span className="text-[10px] font-black text-zinc-600 uppercase tracking-tighter truncate whitespace-nowrap">
+                        {skillId}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -176,7 +180,7 @@ const AgentStatusPanel: React.FC<AgentStatusPanelProps> = ({ agentIndex }) => {
       )}
 
       {/* Info Modals */}
-      <InfoModal 
+      <InfoModal
         isOpen={infoType === 'patterns'}
         onClose={() => setInfoType(null)}
         title="Skill Design Patterns"
@@ -184,7 +188,7 @@ const AgentStatusPanel: React.FC<AgentStatusPanelProps> = ({ agentIndex }) => {
         link="https://lavinigam.com/posts/adk-skill-design-patterns/"
         linkText="Explore ADK Guide"
       />
-      <InfoModal 
+      <InfoModal
         isOpen={infoType === 'extra'}
         onClose={() => setInfoType(null)}
         title="Extra Skills"
