@@ -281,44 +281,42 @@ export const AGENTIC_SETS: AgenticSystem[] = [
     }
   },
   {
-    id: 'pr-agency',
-    teamName: 'PR Agency',
-    teamType: 'Public Relations',
-    teamDescription: 'A sequential pipeline for media outreach: from strategy to press drafting.',
-    color: '#E34B99',
+    id: 'local-lab',
+    teamName: 'Local Intelligence Lab',
+    teamType: 'Offline AI',
+    teamDescription: 'High-performance local inference team optimized for private, offline work using Gemma 4.',
+    color: '#6366F1',
     outputType: 'text',
-    outputModel: DEFAULT_MODELS.text,
-    outputAutoApprove: false,
+    outputModel: 'gemma-4',
+    outputAutoApprove: true,
     user: { index: 0, model: 'Human', position: { x: 0, y: 0 } },
     leadAgent: {
-      id: 'pr-director',
+      id: 'local-orchestrator',
       index: 1,
-      name: 'PR Director',
-      description: 'Oversees media relations, strategic communications, and brand reputation.',
-      color: '#E34B99',
-      model: DEFAULT_MODELS.text,
+      name: 'Local Lead',
+      description: 'Orchestrates complex reasoning tasks locally using in-browser inference.',
+      color: '#6366F1',
+      model: 'gemma-4',
       humanInTheLoop: true,
       position: { x: 0, y: 130 },
       subagents: [
         {
-          id: 'media-strategist',
+          id: 'local-specialist-a',
           index: 2,
-          name: 'Media Strategist',
-          description: 'Identifies key media outlets and manages journalist outreach.',
-          color: '#E6D979',
-          model: DEFAULT_MODELS.text,
-          position: { x: 0, y: 260 },
-          subagents: [
-            {
-              id: 'press-writer',
-              index: 3,
-              name: 'Press Writer',
-              description: 'Drafts press releases and media kits based on strategic goals.',
-              color: '#5E888E',
-              model: DEFAULT_MODELS.text,
-              position: { x: 0, y: 390 }
-            }
-          ]
+          name: 'Logic Expert',
+          description: 'Specializes in logical reasoning, structured data, and technical analysis.',
+          color: '#818CF8',
+          model: 'gemma-4',
+          position: { x: -200, y: 280 }
+        },
+        {
+          id: 'local-specialist-b',
+          index: 3,
+          name: 'Creative Writer',
+          description: 'Specializes in creative storytelling, narrative design, and natural language.',
+          color: '#C084FC',
+          model: 'gemma-4',
+          position: { x: 200, y: 280 }
         }
       ]
     }

@@ -26,6 +26,17 @@ export interface CharacterState {
   chatMessages: ChatMessage[];
   inspectorTab: 'info' | 'chat';
   
+  // Gemma 4 Local Model State
+  modelLoadingProgress: number;
+  isModelVerified: boolean;
+  isModelReady: boolean;
+  isDownloading: boolean;
+  isBootModalOpen: boolean;
+  setModelLoadingProgress: (progress: number) => void;
+  setIsModelVerified: (verified: boolean) => void;
+  setIsModelReady: (ready: boolean) => void;
+  setIsDownloading: (downloading: boolean) => void;
+  setIsBootModalOpen: (open: boolean) => void;
   // Real-time agent statuses for 3D synchronization
   agentStatuses: Record<number, AgentState>;
   setAgentStatus: (index: number, status: AgentState) => void;

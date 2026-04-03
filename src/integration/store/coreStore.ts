@@ -161,7 +161,11 @@ export const useCoreStore = create<CoreState>()(
       referenceImages: [],
       phase: 'idle',
       finalOutput: null,
-      availableModels: [...AVAILABLE_MODELS.text],
+      availableModels: (() => {
+        const constants = [...AVAILABLE_MODELS.text];
+        // Ensure constants are always present
+        return constants;
+      })(),
       totalTokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       agentTokenUsage: {},
       totalEstimatedCost: 0,

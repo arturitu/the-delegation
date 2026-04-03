@@ -24,6 +24,18 @@ export const useUiStore = create<CharacterState>()(
     setAgentStatus: (index: number, status: AgentState) => set((s) => ({
       agentStatuses: { ...s.agentStatuses, [index]: status }
     })),
+    
+    // Gemma 4 Local Model
+    modelLoadingProgress: 0,
+    isModelVerified: false, // Files exist in public
+    isModelReady: false,    // Model actually loaded in VRAM
+    isDownloading: false,
+    isBootModalOpen: false,
+    setModelLoadingProgress: (progress: number) => set({ modelLoadingProgress: progress }),
+    setIsModelVerified: (verified: boolean) => set({ isModelVerified: verified }),
+    setIsModelReady: (ready: boolean) => set({ isModelReady: ready }),
+    setIsDownloading: (downloading: boolean) => set({ isDownloading: downloading }),
+    setIsBootModalOpen: (open: boolean) => set({ isBootModalOpen: open }),
 
     isBYOKOpen: false,
     byokError: null,

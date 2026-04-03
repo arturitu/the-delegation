@@ -15,13 +15,16 @@ import SimulationView from './interface/SimulationView';
 import { VisualConfigurator } from './interface/VisualConfigurator/VisualConfigurator';
 import { SceneContext } from './simulation/SceneContext';
 import { SceneManager } from './simulation/SceneManager';
+import { useUiStore } from './integration/store/uiStore';
+import GemmaBootModal from './interface/GemmaBootModal';
 
 
 const App: React.FC = () => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const managerRef = useRef<SceneManager | null>(null);
   const [sceneManager, setSceneManager] = useState<SceneManager | null>(null);
-  const { isLogOpen, isKanbanOpen, setIsResizing, viewMode, setViewMode } = useCoreStore();
+  const { isLogOpen, isKanbanOpen, setIsResizing, viewMode } = useCoreStore();
+  const { llmConfig, isModelReady, isBootModalOpen, setIsBootModalOpen } = useUiStore();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [kanbanHeight, setKanbanHeight] = useState(220);
@@ -70,6 +73,13 @@ const App: React.FC = () => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (llmConfig.model === 'gemma-4' && !isModelReady) {
+      console.log('[App] Local model selected but not ready. Opening Boot Modal.');
+      setIsBootModalOpen(true);
+    }
+  }, [llmConfig.model, isModelReady, setIsBootModalOpen]);
 
   return (
     <SceneContext.Provider value={sceneManager}>
@@ -126,6 +136,7 @@ const App: React.FC = () => {
         {/* Final output — fixed viewport overlay */}
         <FinalOutputModal />
         <OutputReviewModal />
+        {isBootModalOpen && <GemmaBootModal onClose={() => setIsBootModalOpen(false)} />}
       </div>
     </SceneContext.Provider>
   );

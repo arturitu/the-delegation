@@ -9,7 +9,8 @@ export const AVAILABLE_MODELS = {
   text: [
     'gemini-3-flash-preview',
     'gemini-3.1-pro-preview',
-    'gemini-3.1-flash-lite-preview'
+    'gemini-3.1-flash-lite-preview',
+    'gemma-4'
   ],
   image: [
     'gemini-3.1-flash-image-preview',

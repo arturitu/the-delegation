@@ -1,5 +1,6 @@
 import { LLMMessage } from '../llm/types';
 import { GeminiProvider } from '../llm/providers/GeminiProvider';
+import { TransformersJsProvider } from '../llm/providers/TransformersJsProvider';
 import { useUiStore } from '../../integration/store/uiStore';
 import { useCoreStore } from '../../integration/store/coreStore';
 import { useTeamStore } from '../../integration/store/teamStore';
@@ -38,9 +39,16 @@ export class AgentBrain {
       this.refreshFromStore();
       const core = useCoreStore.getState();
       const llmConfig = useUiStore.getState().llmConfig;
-      if (!llmConfig.apiKey) throw new Error('Gemini API key is required');
-      const provider = new GeminiProvider(llmConfig.apiKey);
-      const model = this.host.data.model || llmConfig.model;
+      const isGlobalLocal = llmConfig.model === 'gemma-4';
+      const model = isGlobalLocal ? 'gemma-4' : (this.host.data.model || llmConfig.model);
+      const isLocalModel = model === 'gemma-4';
+      
+      if (!isLocalModel && !llmConfig.apiKey) throw new Error('Gemini API key is required');
+      
+      const provider = isLocalModel 
+        ? TransformersJsProvider.getInstance() 
+        : new GeminiProvider(llmConfig.apiKey);
+        
       const teamId = useTeamStore.getState().selectedAgentSetId;
       const activeTeam = useTeamStore.getState().customSystems.find(s => s.id === teamId)
         || AGENTIC_SETS.find(s => s.id === teamId);
@@ -236,9 +244,21 @@ export class AgentBrain {
 
     try {
       const llmConfig = useUiStore.getState().llmConfig;
-      if (!llmConfig.apiKey) throw new Error('Gemini API key is required');
-      const provider = new GeminiProvider(llmConfig.apiKey) as any;
-      const model = options.model || activeTeam.outputModel || llmConfig.model;
+      const isGlobalLocal = llmConfig.model === 'gemma-4';
+      let model = options.model || activeTeam.outputModel || llmConfig.model;
+      
+      // Force gemma-4 for text output if it's the global choice
+      if (isGlobalLocal && activeTeam.outputType === 'text') {
+        model = 'gemma-4';
+      }
+      
+      const isLocalModel = model === 'gemma-4';
+
+      if (!isLocalModel && !llmConfig.apiKey) throw new Error('Gemini API key is required');
+      
+      const provider = isLocalModel 
+        ? TransformersJsProvider.getInstance() 
+        : new GeminiProvider(llmConfig.apiKey) as any;
 
       core.addLogEntry({
         agentIndex: 0,
