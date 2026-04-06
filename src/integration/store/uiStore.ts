@@ -27,11 +27,13 @@ export const useUiStore = create<CharacterState>()(
     
     // Gemma 4 Local Model
     modelLoadingProgress: 0,
+    modelLoadingFile: null,
     isModelVerified: false, // Files exist in public
     isModelReady: false,    // Model actually loaded in VRAM
     isDownloading: false,
     isBootModalOpen: false,
     setModelLoadingProgress: (progress: number) => set({ modelLoadingProgress: progress }),
+    setModelLoadingFile: (file: string | null) => set({ modelLoadingFile: file }),
     setIsModelVerified: (verified: boolean) => set({ isModelVerified: verified }),
     setIsModelReady: (ready: boolean) => set({ isModelReady: ready }),
     setIsDownloading: (downloading: boolean) => set({ isDownloading: downloading }),

@@ -1,4 +1,4 @@
-import { LLMMessage, LLMProvider, LLMResponse, LLMToolDefinition } from '../types';
+import { LLMMessage, LLMProvider, LLMResponse, LLMToolCall, LLMToolDefinition } from '../types';
 import { useUiStore } from '../../../integration/store/uiStore';
 // @ts-ignore - Vite worker import
 import TransformersWorker from '../workers/transformersWorker?worker';
@@ -49,14 +49,16 @@ export class TransformersJsProvider implements LLMProvider {
   }
 
   private handleLoadingStatus(data: any) {
-    const { setModelLoadingProgress, setIsModelReady, setIsDownloading } = useUiStore.getState();
+    const { setModelLoadingProgress, setModelLoadingFile, setIsModelReady, setIsDownloading } = useUiStore.getState();
     
     if (data.status === 'downloading') {
       setModelLoadingProgress(data.progress);
+      setModelLoadingFile(data.file || null);
     } else if (data.status === 'ready') {
       console.log('[TransformersJsProvider] Model Ready');
       this.isModelReady = true;
       setModelLoadingProgress(100);
+      setModelLoadingFile(null);
       setIsModelReady(true);
       setIsDownloading(false);
       
@@ -127,7 +129,7 @@ export class TransformersJsProvider implements LLMProvider {
 
   async generateCompletion(
     messages: LLMMessage[],
-    _tools?: LLMToolDefinition[],
+    tools?: LLMToolDefinition[],
     systemInstruction?: string,
     modelName?: string
   ): Promise<LLMResponse> {
@@ -140,11 +142,56 @@ export class TransformersJsProvider implements LLMProvider {
     }
 
     return new Promise((resolve, reject) => {
-      this.resolveGenerate = resolve;
+      this.resolveGenerate = (response: LLMResponse) => {
+        // Post-process response for local tool calling protocol
+        if (modelId === 'gemma-4' && response.content) {
+          const toolCallRegex = /<tool_call>(.*?)<\/tool_call>/gs;
+          const matches = [...response.content.matchAll(toolCallRegex)];
+          
+          if (matches.length > 0) {
+            const toolCalls: LLMToolCall[] = [];
+            let cleanContent = response.content;
+
+            for (const match of matches) {
+              try {
+                const callData = JSON.parse(match[1].trim());
+                toolCalls.push({
+                  id: Math.random().toString(36).substring(7),
+                  type: 'function',
+                  function: {
+                    name: callData.name,
+                    arguments: JSON.stringify(callData.args || callData.arguments || {})
+                  }
+                });
+                // Remove the tool call from the visible content
+                cleanContent = cleanContent.replace(match[0], '');
+              } catch (e) {
+                console.error('[TransformersJsProvider] Failed to parse local tool call:', match[1], e);
+              }
+            }
+
+            response.content = cleanContent.trim() || null;
+            response.tool_calls = toolCalls.length > 0 ? toolCalls : undefined;
+          }
+        }
+        resolve(response);
+      };
       this.rejectGenerate = reject;
 
-      const fullMessages = systemInstruction 
-        ? [{ role: 'system', content: systemInstruction }, ...messages]
+      // Inject tools into system instruction for local model
+      let finalSystemInstruction = systemInstruction || '';
+      if (modelId === 'gemma-4' && tools && tools.length > 0) {
+        const toolsJson = JSON.stringify(tools.map(t => ({
+          name: t.function.name,
+          description: t.function.description,
+          parameters: t.function.parameters
+        })), null, 2);
+        
+        finalSystemInstruction += `\n\nAVAILABLE TOOLS:\n${toolsJson}\n\nTo use a tool, use ONLY the format: <tool_call>{"name": "tool_name", "args": {...}}</tool_call>`;
+      }
+
+      const fullMessages = finalSystemInstruction 
+        ? [{ role: 'system', content: finalSystemInstruction }, ...messages]
         : messages;
 
       this.worker?.postMessage({

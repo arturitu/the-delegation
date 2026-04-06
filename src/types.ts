@@ -28,11 +28,13 @@ export interface CharacterState {
   
   // Gemma 4 Local Model State
   modelLoadingProgress: number;
+  modelLoadingFile: string | null;
   isModelVerified: boolean;
   isModelReady: boolean;
   isDownloading: boolean;
   isBootModalOpen: boolean;
   setModelLoadingProgress: (progress: number) => void;
+  setModelLoadingFile: (file: string | null) => void;
   setIsModelVerified: (verified: boolean) => void;
   setIsModelReady: (ready: boolean) => void;
   setIsDownloading: (downloading: boolean) => void;

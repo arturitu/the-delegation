@@ -6,7 +6,7 @@ export class PromptBuilder {
   /**
    * Builds the system prompt for an agent based on their role and current project context.
    */
-  public static buildSystemPrompt(agent: AgentNode, phase: string, brief: string, allAgents: any[]): string {
+  public static buildSystemPrompt(agent: AgentNode, phase: string, brief: string, allAgents: any[], isLocal: boolean = false): string {
     const isLead = agent.index === 1;
     const team = allAgents
       .map((a: any) => `[${a.data.index}] ${a.data.name}`)
@@ -56,6 +56,10 @@ The generation model expects a SINGLE prompt to produce a SINGLE ${activeTeam?.o
       ? `\nREVISION REQUESTED:\n${pendingReviews.map(t => `- [${t.title}] Feedback: ${t.reviewComments}`).join('\n')}`
       : '';
 
+    const localProtocol = isLocal 
+      ? `\n6. TOOL CALLING PROTOCOL: To use a tool, you MUST output a JSON block wrapped in <tool_call> tags. Example: <tool_call>{"name": "create_task", "args": {"title": "Research X", "assignedAgentId": 2}}</tool_call>. DO NOT use tools if not explicitly required by your phase goals. ALWAYS finish your response with the tool call if you use one.`
+      : '';
+
     return `ID: ${agent.name}. Role: ${agent.description}. Phase: ${phase}.
 ${brief ? `Brief: ${brief}` : ''}${reviewContext}
 Team: User (0), ${team}
@@ -66,7 +70,7 @@ RULES:
 2. Tools only in WORKING (except set_user_brief in IDLE).
 3. QUALITY: If your node has 'Human-in-the-loop' enabled, your 'complete_task' result will be reviewed by the user before completion. 
 4. NO META-TALK: Avoid "I have finished X", "Here is the result". Use the tool payload for content and Chat for conversation only.${outputInstruction}${imageInstruction}
-5. LANGUAGE: You MUST generate all systemic outputs (tasks, 'complete_task' results, and 'deliver_project' prompts) in the same language as the 'Brief' or the user's interaction. If the project description is in Spanish, EVERYTHING you generate must be in Spanish.
+5. LANGUAGE: You MUST generate all systemic outputs (tasks, 'complete_task' results, and 'deliver_project' prompts) in the same language as the 'Brief' or the user's interaction. If the project description is in Spanish, EVERYTHING you generate must be in Spanish.${localProtocol}
 Goal: ${objectives[phase as keyof typeof objectives] || ''}`;
   }
 }

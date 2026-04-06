@@ -12,6 +12,7 @@ const MODEL_ID = 'gemma-4';
 const GemmaBootModal: React.FC<GemmaBootModalProps> = ({ onClose }) => {
   const { 
     modelLoadingProgress, 
+    modelLoadingFile,
     isModelVerified, 
     setIsModelVerified,
     isModelReady,
@@ -151,6 +152,12 @@ const GemmaBootModal: React.FC<GemmaBootModalProps> = ({ onClose }) => {
                   className="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 rounded-full transition-all duration-300 ease-out"
                   style={{ width: `${modelLoadingProgress}%` }}
                 />
+              </div>
+              <div className="mt-4 flex flex-col items-center gap-1">
+                <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400/60 uppercase">Current Phase</p>
+                <p className="text-[11px] font-mono font-bold text-zinc-500 truncate max-w-full px-4">
+                  {modelLoadingFile ? `loading: ${modelLoadingFile}` : 'Initializing engine...'}
+                </p>
               </div>
               <p className="mt-8 text-center text-xs font-medium text-zinc-400 max-w-xs mx-auto italic">
                 Mounting Neural Network into VRAM. Please wait.
