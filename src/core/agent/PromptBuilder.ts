@@ -41,8 +41,18 @@ export class PromptBuilder {
       
     const referenceImages = useCoreStore.getState().referenceImages;
     const hasImages = referenceImages.length > 0 && (activeTeam?.outputType === 'image' || activeTeam?.outputType === 'video');
+    
+    let modelLimitInfo = '';
+    if (activeTeam?.outputType === 'video') {
+      if (activeTeam.outputModel?.includes('lite')) {
+        modelLimitInfo = ` Note: The current model (${activeTeam.outputModel}) supports only 1 reference image for animation.`;
+      } else {
+        modelLimitInfo = ` Note: The current model (${activeTeam.outputModel}) supports up to 3 reference images for style and content guidance.`;
+      }
+    }
+
     const imageInstruction = hasImages
-      ? `\n6. REFERENCE IMAGES: The user has provided ${referenceImages.length} reference image(s). You MUST use these as a visual guide for the project's style, mood, and content. Your team should analyze these to ensure the final ${activeTeam?.outputType} aligns with the inspiration.`
+      ? `\n6. REFERENCE IMAGES: The user has provided ${referenceImages.length} reference image(s). You MUST use these as a visual guide for the project's style, mood, and content. Your team should analyze these to ensure the final ${activeTeam?.outputType} aligns with the inspiration.${modelLimitInfo}`
       : '';
 
     const outputInstruction = activeTeam?.outputType !== 'text' 
@@ -66,7 +76,7 @@ Team: User (0), ${team}
 KANBAN:
 ${board}
 RULES:
-1. MAX 30 WORDS for chat. Task results ('complete_task', 'deliver_project') MUST be direct Markdown. NO intros, outros, or self-attribution ("Done by X"). Focus on data.
+1. MAX 30 WORDS for chat. Systemic outputs ('complete_task', 'deliver_project', and the task titles/descriptions you create) MUST be under 100 WORDS. NO conversational filler, intros, outros, or self-attribution ("I have done..."). Focus exclusively on core data and synthesis.
 2. Tools only in WORKING (except set_user_brief in IDLE).
 3. QUALITY: If your node has 'Human-in-the-loop' enabled, your 'complete_task' result will be reviewed by the user before completion. 
 4. NO META-TALK: Avoid "I have finished X", "Here is the result". Use the tool payload for content and Chat for conversation only.${outputInstruction}${imageInstruction}

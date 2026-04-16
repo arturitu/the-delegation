@@ -2,24 +2,23 @@
   <img src="public/images/the-delegation.svg" width="256" alt="The Delegation Logo">
 </p>
 
-<h1 align="center">A no-code 3D playground to explore, design, and interact with Agentic AI systems</h1>
-
 <p align="center">
-  <a href="https://arturitu.github.io/the-delegation/"><b>Launch The Delegation · Full Experience*</b></a>
+  <a href="https://arturitu.github.io/the-delegation/"><b>Launch The Delegation · Full Experience *</b></a>
 </p>
 
 > [!IMPORTANT]
-> **\*** This experience requires **BYOK (Bring Your Own Key)**. You will need a **Gemini API** key to run the simulation. Deep integration enables native support for text, and multimodal generation (Nano Banana, Lyria 3, Veo 3.1). You can also **clone or fork** this repository to run it locally.
+> **\*** This experience requires **BYOK (Bring Your Own Key)**. You will need a **[Gemini API key](https://aistudio.google.com/app/apikey)** to run the simulation. Deep integration enables native support for text, and multimodal generation (**Nano Banana**, **Lyria 3**, **Veo 3.1**). You can also **clone or fork** this repository to run it locally.
+<div align="center">
+  <img src="public/images/the-delegation-UI.jpg" width="100%" alt="The Delegation Hero">
+</div>
 
----
-### This project is designed for **AI enthusiasts, educators, and creative developers** looking to understand multi-agent collaboration in a living 3D office without writing a single line of code.
+<br/>
 
-<p align="center">
-  <img src="public/images/the-delegation-UI.png" width="100%" alt="The Delegation Hero">
-</p>
+## What is The Delegation?
 
----
+# A no-code 3D playground to explore, design, and interact with Agentic AI systems
 
+This project is designed for **AI enthusiasts, educators, and creative developers** looking to understand multi-agent collaboration in a living 3D office without writing a single line of code.
 
 ## Getting Started
 

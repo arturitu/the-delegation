@@ -15,7 +15,7 @@ const DeleteTaskModal: React.FC<DeleteTaskModalProps> = ({ isOpen, onClose, onCo
     <div className="fixed inset-0 z-110 flex items-center justify-center p-4">
       <div
         onClick={onClose}
-        className="absolute inset-0 bg-zinc-950/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-white/60 backdrop-blur-[2px]"
       />
       <div
         className="relative w-full max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden border border-zinc-100"

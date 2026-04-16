@@ -49,7 +49,7 @@ export function calculateCost(promptTokens: number, completionTokens: number, mo
   
   // 3. Per Second (Video)
   if (pricing.perSecond !== undefined) {
-    return (durationOrCount || 5) * pricing.perSecond; // Default 5s if not specified
+    return (durationOrCount || 4) * pricing.perSecond; // Default 4s if not specified
   }
 
   // 4. Token based (Text)
@@ -57,4 +57,15 @@ export function calculateCost(promptTokens: number, completionTokens: number, mo
   const outputCost = (completionTokens / 1000000) * (pricing.outputPer1M || 0);
 
   return inputCost + outputCost;
+}
+
+export function calculateTokensForCost(modelName: string, durationOrCount?: number): number {
+  const lowerName = modelName.toLowerCase();
+  const pricingKey = Object.keys(GEMINI_PRICING).find(key => lowerName.includes(key));
+  const pricing = pricingKey ? GEMINI_PRICING[pricingKey] : DEFAULT_PRICING;
+  
+  const cost = calculateCost(0, 0, modelName, durationOrCount);
+  const baseOutputPrice = GEMINI_PRICING[DEFAULT_MODELS.text]?.outputPer1M || 3.0;
+  
+  return Math.floor((cost / baseOutputPrice) * 1000000);
 }

@@ -73,7 +73,7 @@ const TeamFlowModal: React.FC<TeamFlowModalProps> = ({ isOpen, onClose, system }
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-10 pointer-events-none">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-white/40 backdrop-blur-sm pointer-events-auto animate-in fade-in duration-300"
+        className="absolute inset-0 bg-white/60 backdrop-blur-sm pointer-events-auto animate-in fade-in duration-300"
         onClick={onClose}
       />
 

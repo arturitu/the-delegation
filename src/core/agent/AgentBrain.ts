@@ -219,7 +219,6 @@ export class AgentBrain {
         defaultParams.resolution = '720p';
         defaultParams.aspectRatio = '16:9';
         defaultParams.durationSeconds = 4;
-        defaultParams.generateAudio = true;
       }
 
       core.setPendingOutputParams(defaultParams);
@@ -261,7 +260,7 @@ export class AgentBrain {
         : new GeminiProvider(llmConfig.apiKey) as any;
 
       core.addLogEntry({
-        agentIndex: 0,
+        agentIndex: -1,
         action: `Generating final ${activeTeam.outputType} using ${model}...`,
         taskId: undefined
       });
@@ -297,7 +296,7 @@ export class AgentBrain {
       }
 
       core.addResponseLog({
-        agentIndex: 0,
+        agentIndex: -1,
         agentName: 'System',
         content: `Final ${activeTeam.outputType} generated successfully.`,
         usage: usage,

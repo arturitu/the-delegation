@@ -141,19 +141,6 @@ export function OutputReviewModal() {
           </select>
         </div>
       </div>
-      <div className="flex items-center justify-between p-3 bg-zinc-100/50 rounded-xl border border-zinc-200/50">
-        <div className="flex items-center gap-2">
-          <Volume2 size={14} className="text-zinc-400" />
-          <span className="text-xs font-bold text-zinc-600">Generate Soundtrack</span>
-          <InfoBubble text="Include a matching synthesized music track tailored to the video content." />
-        </div>
-        <button
-          onClick={() => updateParam('generateAudio', !params.generateAudio)}
-          className={`w-10 h-5 rounded-full transition-colors flex items-center px-1 ${params.generateAudio ? 'bg-black' : 'bg-zinc-300'}`}
-        >
-          <div className={`w-3 h-3 bg-white rounded-full transition-transform ${params.generateAudio ? 'translate-x-5' : 'translate-x-0'}`} />
-        </button>
-      </div>
     </div>
   )
 

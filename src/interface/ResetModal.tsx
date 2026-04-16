@@ -14,7 +14,7 @@ const ResetModal: React.FC<ResetModalProps> = ({ isOpen, onClose, onConfirm }) =
     <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
       <div
         onClick={onClose}
-        className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-white/60 backdrop-blur-sm"
       />
       <div
         className="relative w-full max-w-md bg-white rounded-4xl shadow-2xl overflow-hidden border border-zinc-100"
