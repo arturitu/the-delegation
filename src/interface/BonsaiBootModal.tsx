@@ -7,9 +7,9 @@ interface BonsaiBootModalProps {
   onClose: () => void;
 }
 
-const MODEL_ID = 'Bonsai 1.7B';
-
 const BonsaiBootModal: React.FC<BonsaiBootModalProps> = ({ onClose }) => {
+  const { llmConfig } = useUiStore();
+  const MODEL_ID = llmConfig.model || 'Bonsai 1.7B';
   const {
     modelLoadingProgress,
     modelLoadingFile,
@@ -61,7 +61,7 @@ const BonsaiBootModal: React.FC<BonsaiBootModalProps> = ({ onClose }) => {
               <Cpu size={10} className="text-indigo-500" />
             </div>
             <h2 className="text-4xl font-black text-darkDelegation tracking-tight mb-4">
-              {isDownloading ? 'Waking up' : 'Local'} <span className="text-indigo-600">Bonsai 1.7B</span>
+              {isDownloading ? 'Waking up' : 'Local'} <span className="text-indigo-600">{MODEL_ID}</span>
             </h2>
             <p className="text-zinc-500 text-sm font-medium leading-relaxed max-w-md">
               Local LLM model that runs entirely in your browser via WebGPU. No data leaves your device. 100% private.
@@ -101,7 +101,7 @@ const BonsaiBootModal: React.FC<BonsaiBootModalProps> = ({ onClose }) => {
                 <Globe className="text-emerald-500 shrink-0" size={24} />
                 <div>
                   <h4 className="text-sm font-black text-emerald-900 uppercase tracking-tight mb-0.5">Network Ready</h4>
-                  <p className="text-[11px] text-emerald-700/80 font-medium">Bonsai 1.7B will be streamed to your browser via WebGPU.</p>
+                  <p className="text-[11px] text-emerald-700/80 font-medium">{MODEL_ID} will be streamed to your browser via WebGPU.</p>
                 </div>
               </div>
 
@@ -146,7 +146,7 @@ const BonsaiBootModal: React.FC<BonsaiBootModalProps> = ({ onClose }) => {
               </div>
               <h3 className="text-3xl font-black text-darkDelegation tracking-tight mb-3">System Online</h3>
               <p className="text-zinc-400 text-sm font-medium mb-10 max-w-xs mx-auto leading-relaxed">
-                Bonsai 1.7B has been successfully loaded into VRAM. Agents are now fully autonomous and offline.
+                {MODEL_ID} has been successfully loaded into VRAM. Agents are now fully autonomous and offline.
               </p>
               <button
                 onClick={onClose}

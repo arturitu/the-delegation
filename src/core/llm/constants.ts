@@ -1,4 +1,4 @@
-export const LOCAL_MODELS = ['Bonsai 1.7B'] as const;
+export const LOCAL_MODELS = ['Bonsai 1.7B', 'Gemma 4 E2B'] as const;
 
 export const DEFAULT_MODELS = {
   text: 'Bonsai 1.7B',
@@ -12,7 +12,8 @@ export const AVAILABLE_MODELS = {
     'gemini-3-flash-preview',
     'gemini-3.1-pro-preview',
     'gemini-3.1-flash-lite-preview',
-    'Bonsai 1.7B'
+    'Bonsai 1.7B',
+    'Gemma 4 E2B'
   ],
   image: [
     'gemini-3.1-flash-image-preview',

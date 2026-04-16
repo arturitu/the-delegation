@@ -6,7 +6,8 @@ env.allowRemoteModels = true;
 env.useBrowserCache = true;
 
 const MODEL_MAPPING: Record<string, string> = {
-  'Bonsai 1.7B': 'onnx-community/Bonsai-1.7B-ONNX'
+  'Bonsai 1.7B': 'onnx-community/Bonsai-1.7B-ONNX',
+  'Gemma 4 E2B': 'onnx-community/gemma-4-E2B-it-ONNX'
 };
 
 let generator: any = null;
