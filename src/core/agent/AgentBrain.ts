@@ -7,6 +7,7 @@ import { useTeamStore } from '../../integration/store/teamStore';
 import { ToolRegistry } from './ToolRegistry';
 import { PromptBuilder } from './PromptBuilder';
 import { AGENTIC_SETS, AgentNode } from '../../data/agents';
+import { LOCAL_MODELS } from '../llm/constants';
 
 export interface BrainHost {
   data: AgentNode;
@@ -39,9 +40,9 @@ export class AgentBrain {
       this.refreshFromStore();
       const core = useCoreStore.getState();
       const llmConfig = useUiStore.getState().llmConfig;
-      const isGlobalLocal = llmConfig.model === 'gemma-4';
-      const model = isGlobalLocal ? 'gemma-4' : (this.host.data.model || llmConfig.model);
-      const isLocalModel = model === 'gemma-4';
+      const isGlobalLocal = LOCAL_MODELS.includes(llmConfig.model as any);
+      const model = isGlobalLocal ? llmConfig.model : (this.host.data.model || llmConfig.model);
+      const isLocalModel = LOCAL_MODELS.includes(model as any);
       
       if (!isLocalModel && !llmConfig.apiKey) throw new Error('Gemini API key is required');
       
@@ -243,15 +244,15 @@ export class AgentBrain {
 
     try {
       const llmConfig = useUiStore.getState().llmConfig;
-      const isGlobalLocal = llmConfig.model === 'gemma-4';
+      const isGlobalLocal = LOCAL_MODELS.includes(llmConfig.model as any);
       let model = options.model || activeTeam.outputModel || llmConfig.model;
       
-      // Force gemma-4 for text output if it's the global choice
+      // Force local model for text output if it's the global choice
       if (isGlobalLocal && activeTeam.outputType === 'text') {
-        model = 'gemma-4';
+        model = llmConfig.model;
       }
       
-      const isLocalModel = model === 'gemma-4';
+      const isLocalModel = LOCAL_MODELS.includes(model as any);
 
       if (!isLocalModel && !llmConfig.apiKey) throw new Error('Gemini API key is required');
       

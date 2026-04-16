@@ -16,7 +16,7 @@ import { VisualConfigurator } from './interface/VisualConfigurator/VisualConfigu
 import { SceneContext } from './simulation/SceneContext';
 import { SceneManager } from './simulation/SceneManager';
 import { useUiStore } from './integration/store/uiStore';
-import GemmaBootModal from './interface/GemmaBootModal';
+import BonsaiBootModal from './interface/BonsaiBootModal';
 
 
 const App: React.FC = () => {
@@ -75,7 +75,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (llmConfig.model === 'gemma-4' && !isModelReady) {
+    if (llmConfig.model === 'bonsai-1' && !isModelReady) {
       console.log('[App] Local model selected but not ready. Opening Boot Modal.');
       setIsBootModalOpen(true);
     }
@@ -136,7 +136,7 @@ const App: React.FC = () => {
         {/* Final output — fixed viewport overlay */}
         <FinalOutputModal />
         <OutputReviewModal />
-        {isBootModalOpen && <GemmaBootModal onClose={() => setIsBootModalOpen(false)} />}
+        {isBootModalOpen && <BonsaiBootModal onClose={() => setIsBootModalOpen(false)} />}
       </div>
     </SceneContext.Provider>
   );

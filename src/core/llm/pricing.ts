@@ -13,7 +13,7 @@ export const GEMINI_PRICING: Record<string, ModelPricing> = {
   [DEFAULT_MODELS.text]: { inputPer1M: 0.50, outputPer1M: 3.00 },
   'gemini-3.1-pro-preview': { inputPer1M: 2.00, outputPer1M: 12.00 },
   'gemini-3.1-flash-lite-preview': { inputPer1M: 0.25, outputPer1M: 1.50 },
-  'gemma-4': { inputPer1M: 0.00, outputPer1M: 0.00 },
+  'bonsai-1': { inputPer1M: 0.00, outputPer1M: 0.00 },
   
   // Image Models
   [DEFAULT_MODELS.image]: { perImage: 0.067 },

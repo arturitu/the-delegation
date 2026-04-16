@@ -1,5 +1,7 @@
+export const LOCAL_MODELS = ['Bonsai 1.7B'] as const;
+
 export const DEFAULT_MODELS = {
-  text: 'gemini-3-flash-preview',
+  text: 'Bonsai 1.7B',
   image: 'gemini-3.1-flash-image-preview',
   music: 'lyria-3-clip-preview',
   video: 'veo-3.1-lite-generate-preview'
@@ -10,7 +12,7 @@ export const AVAILABLE_MODELS = {
     'gemini-3-flash-preview',
     'gemini-3.1-pro-preview',
     'gemini-3.1-flash-lite-preview',
-    'gemma-4'
+    'Bonsai 1.7B'
   ],
   image: [
     'gemini-3.1-flash-image-preview',

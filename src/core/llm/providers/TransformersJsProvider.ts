@@ -1,5 +1,6 @@
 import { LLMMessage, LLMProvider, LLMResponse, LLMToolCall, LLMToolDefinition } from '../types';
 import { useUiStore } from '../../../integration/store/uiStore';
+import { LOCAL_MODELS } from '../constants';
 // @ts-ignore - Vite worker import
 import TransformersWorker from '../workers/transformersWorker?worker';
 
@@ -98,7 +99,7 @@ export class TransformersJsProvider implements LLMProvider {
     useUiStore.getState().setIsDownloading(false);
   }
 
-  public async loadModel(modelId: string, quantization: '4bit' | 'fp32' = '4bit'): Promise<void> {
+  public async loadModel(modelId: string, quantization: 'q1' | '4bit' | 'fp32' = '4bit'): Promise<void> {
     if (this.currentModelId === modelId && this.isModelReady) return;
     
     // If already loading this model, wait for it
@@ -133,18 +134,19 @@ export class TransformersJsProvider implements LLMProvider {
     systemInstruction?: string,
     modelName?: string
   ): Promise<LLMResponse> {
-    const modelId = modelName || 'gemma-4';
+    const modelId = modelName || 'Bonsai 1.7B';
     
     // Ensure model is loaded AND ready before attempting generation
     if (this.currentModelId !== modelId || !this.isModelReady) {
         console.log(`[TransformersJsProvider] Ensuring model ${modelId} is loaded...`);
-        await this.loadModel(modelId);
+        const q = modelId === 'Bonsai 1.7B' ? 'q1' : '4bit';
+        await this.loadModel(modelId, q);
     }
 
     return new Promise((resolve, reject) => {
       this.resolveGenerate = (response: LLMResponse) => {
         // Post-process response for local tool calling protocol
-        if (modelId === 'gemma-4' && response.content) {
+        if (LOCAL_MODELS.includes(modelId as any) && response.content) {
           const toolCallRegex = /<tool_call>(.*?)<\/tool_call>/gs;
           const matches = [...response.content.matchAll(toolCallRegex)];
           
@@ -180,7 +182,7 @@ export class TransformersJsProvider implements LLMProvider {
 
       // Inject tools into system instruction for local model
       let finalSystemInstruction = systemInstruction || '';
-      if (modelId === 'gemma-4' && tools && tools.length > 0) {
+      if (LOCAL_MODELS.includes(modelId as any) && tools && tools.length > 0) {
         const toolsJson = JSON.stringify(tools.map(t => ({
           name: t.function.name,
           description: t.function.description,

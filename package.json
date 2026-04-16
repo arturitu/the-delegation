@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@google/genai": "1.48.0",
-    "@huggingface/transformers": "^4.0.1",
+    "@huggingface/transformers": "^4.1.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "@xyflow/react": "^12.10.1",

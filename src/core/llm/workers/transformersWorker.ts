@@ -1,10 +1,13 @@
 import { pipeline, env, AutoTokenizer, AutoModelForCausalLM, TextGenerationPipeline } from '@huggingface/transformers';
 
 // Configuración de Transformers.js para el entorno del navegador
-env.allowLocalModels = true;
-env.allowRemoteModels = false; // Forzar local-only para evitar errores de HF (Gemma 4)
-env.localModelPath = '/the-delegation/';
-env.useBrowserCache = false; // Mantener desactivado para esta sesión de debug
+env.allowLocalModels = false;
+env.allowRemoteModels = true;
+env.useBrowserCache = true;
+
+const MODEL_MAPPING: Record<string, string> = {
+  'Bonsai 1.7B': 'onnx-community/Bonsai-1.7B-ONNX'
+};
 
 let generator: any = null;
 
@@ -38,11 +41,12 @@ async function checkWebGPU() {
 
 async function loadModel(modelId: string, quantization: string) {
   try {
+    const hfModelId = MODEL_MAPPING[modelId] || modelId;
     self.postMessage({ type: 'LOADING_STATUS', data: { status: 'init', progress: 0 } });
 
     // 1. Cargar el Tokenizer
-    console.log('[Worker] Loading Tokenizer...');
-    const tokenizer = await AutoTokenizer.from_pretrained(modelId, {
+    console.log(`[Worker] Loading Tokenizer from ${hfModelId}...`);
+    const tokenizer = await AutoTokenizer.from_pretrained(hfModelId, {
       progress_callback: (progress: any) => {
         if (progress.status === 'progress') {
           self.postMessage({ 
@@ -54,9 +58,10 @@ async function loadModel(modelId: string, quantization: string) {
     });
 
     // 2. Cargamos el modelo explícitamente (AutoModelForCausalLM)
-    // Dejamos que Transformers.js use el config.json por defecto que incluye 'Gemma4ForConditionalGeneration'
-    const model = await AutoModelForCausalLM.from_pretrained(modelId, {
-      dtype: quantization === '4bit' ? 'q4' : 'fp32',
+    console.log(`[Worker] Loading Model: ${hfModelId} with quantization: ${quantization}`);
+    const model = await AutoModelForCausalLM.from_pretrained(hfModelId, {
+      dtype: modelId === 'Bonsai 1.7B' ? 'q1' : (quantization === '4bit' ? 'q4' : 'fp32'),
+      quantized: true,
       device: 'webgpu',
       use_external_data_format: true,
       progress_callback: (progress: any) => {

@@ -26,7 +26,7 @@ export interface CharacterState {
   chatMessages: ChatMessage[];
   inspectorTab: 'info' | 'chat';
   
-  // Gemma 4 Local Model State
+  // Bonsai 1.7B Local Model State
   modelLoadingProgress: number;
   modelLoadingFile: string | null;
   isModelVerified: boolean;
