@@ -36,6 +36,36 @@ npm run dev
 
 3. **Open the app:** Navigate to the local URL shown in your terminal (usually `http://localhost:3000/the-delegation`).
 
+
+### How to Prompt: Building with The Delegation
+
+The Delegation uses a hierarchical multi-agent architecture. To get the best results, you should treat your initial prompt as a **Project Brief** rather than a single command.
+
+#### 1. The Initial Brief (The "Lead Agent" Prompt)
+Locate the **Lead Agent** in the 3D office or the **Project Info** panel. Your first prompt sets the "Objective" for the entire team.
+
+**Effective Prompt Structure:**
+> "Build a [Project Type] that includes [Feature A] and [Feature B]. Use a [Specific Style] design and ensure the final output is [Format]."
+
+*   **Example:** *"Create a React-based Pomodoro timer. Include a task list, custom alarm sounds, and a 'Deep Work' mode. Use a minimalist Tailwind CSS aesthetic."*
+
+#### 2. Defining Agent Roles (The Node Editor)
+If you need specific logic, open the **Team Editor** (React Flow interface). You can prompt the agents by defining their **System Instructions** within their nodes:
+*   **Designer Agent:** Prompt with: *"Focus on UX/UI consistency and accessibility (WCAG 2.1)."*
+*   **Coder Agent:** Prompt with: *"Write modular, clean TypeScript code. Avoid external heavy libraries."*
+
+#### 3. Iterative Feedback (Human-in-the-Loop)
+As the agents work, they will generate logs in the **Activity Panel**. You can intervene at any time:
+*   **Refinement:** *"The Designer's layout is too cluttered. Lead Agent, tell the Designer to use more whitespace."*
+*   **Correction:** *"The Coder used the wrong API endpoint. Update it to use the v3 production URL."*
+
+#### 4. The "Prompting Loop" Workflow
+1.  **Input Brief:** Give the high-level goal to the Lead Agent.
+2.  **Observe Delegation:** Watch the Lead Agent break the brief into tasks for sub-agents.
+3.  **Review Output:** Check the generated code or design artifacts in the technical logs.
+4.  **Re-Prompt:** If the result isn't perfect, issue a "Change Request" prompt to the Lead Agent to trigger a new work cycle.
+
+
 ## Features
 
 ### Agentic AI System (v0.2.0)
