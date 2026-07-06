@@ -8,6 +8,7 @@
 
 > [!IMPORTANT]
 > **\*** This experience requires **BYOK (Bring Your Own Key)**. You will need a **[Gemini API key](https://aistudio.google.com/app/apikey)** to run the simulation. Deep integration enables native support for text, and multimodal generation (**Nano Banana**, **Lyria 3**, **Veo 3.1**). You can also **clone or fork** this repository to run it locally.
+> The build now also plumbs `OPENROUTER_API_KEY` through the Vite env layer for empire-wide compatibility, but the current Delegation runtime still uses Gemini as the primary key.
 <div align="center">
   <img src="public/images/the-delegation-UI.jpg" width="100%" alt="The Delegation Hero">
 </div>
