@@ -17,6 +17,53 @@ export class GeminiProvider implements LLMProvider {
     systemInstruction?: string,
     modelName: string = DEFAULT_MODELS.text
   ): Promise<LLMResponse> {
+    // Custom Nvidia NIM Hack Start
+    if (modelName.startsWith("meta/") || modelName.startsWith("nvidia/") || modelName.includes("gpt-oss")) {
+      const nvidiaPayload: any = {
+        model: modelName,
+        messages: messages.filter(m => m.role !== 'system').map(m => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: m.content || ""
+        })),
+        temperature: 0.3,
+        max_tokens: 4096,
+        top_p: 0.95
+      };
+
+      if (modelName.includes("gemma") || modelName.includes("gpt-oss")) {
+        nvidiaPayload.chat_template_kwargs = { "enable_thinking": true };
+      }
+
+      if (systemInstruction) {
+        nvidiaPayload.messages.unshift({ role: 'system', content: systemInstruction });
+      }
+
+      console.log("Routing to Nvidia NIM:", nvidiaPayload);
+      const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(nvidiaPayload)
+      });
+      const data = await response.json();
+      console.log("Nvidia NIM response:", data);
+
+      return {
+        content: data.choices[0].message.content,
+        usage: {
+          promptTokens: data.usage?.prompt_tokens || 0,
+          completionTokens: data.usage?.completion_tokens || 0,
+          totalTokens: data.usage?.total_tokens || 0
+        },
+        finishReason: data.choices[0].finish_reason,
+        raw: data,
+        request: nvidiaPayload
+      };
+    }
+    // Custom Nvidia NIM Hack End
+
     const contents = this.mapMessagesToGemini(messages);
 
     const systemTools: Tool[] | undefined = tools ? [{

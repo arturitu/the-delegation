@@ -9,7 +9,9 @@ export const AVAILABLE_MODELS = {
   text: [
     'gemini-3-flash-preview',
     'gemini-3.1-pro-preview',
-    'gemini-3.1-flash-lite-preview'
+    'gemini-3.1-flash-lite-preview',
+    'meta/llama-3.3-70b-instruct',
+    'nvidia/nemotron-3-ultra-550b-a55b'
   ],
   image: [
     'gemini-3.1-flash-image-preview',
