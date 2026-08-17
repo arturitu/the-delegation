@@ -114,9 +114,9 @@ export class AgentBrain {
           return { id: tc.id, name: tc.function.name, args: JSON.parse(tc.function.arguments) };
         } catch (e) {
           console.error('[AgentBrain] Failed to parse tool arguments', tc.function.arguments);
-          return null;
+          return { id: tc.id, name: tc.function.name, args: { _error: "malformed_json" }, _malformed: true };
         }
-      }).filter(Boolean) as any[] || [];
+      }) || [];
 
       // 6. Final Message Construction
       const isInternalTrigger = options.silent;
@@ -156,8 +156,11 @@ export class AgentBrain {
 
       // 7. Process Actions (Tools)
       for (const tc of toolCalls) {
-        const result = ToolRegistry.process(this.host as any, tc);
-        if (tc.name === 'deliver_project' && result) {
+        const result = tc._malformed 
+          ? "Error: Invalid JSON arguments provided for tool call." 
+          : ToolRegistry.process(this.host as any, tc);
+          
+        if (tc.name === 'deliver_project' && result && !tc._malformed) {
           this.handleFinalAssetGeneration(tc.args.output);
         }
         
