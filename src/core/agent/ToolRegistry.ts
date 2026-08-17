@@ -5,6 +5,7 @@ import { completeTask } from './tools/completeTask';
 import { deliverProject } from './tools/deliverProject';
 
 export interface ToolCall {
+  id?: string;
   name: string;
   args: any;
 }

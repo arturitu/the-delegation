@@ -111,7 +111,7 @@ export class AgentBrain {
       const text = response.content || '';
       const toolCalls = response.tool_calls?.map(tc => {
         try {
-          return { name: tc.function.name, args: JSON.parse(tc.function.arguments) };
+          return { id: tc.id, name: tc.function.name, args: JSON.parse(tc.function.arguments) };
         } catch (e) {
           console.error('[AgentBrain] Failed to parse tool arguments', tc.function.arguments);
           return null;
