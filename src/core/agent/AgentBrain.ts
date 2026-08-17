@@ -156,10 +156,21 @@ export class AgentBrain {
 
       // 7. Process Actions (Tools)
       for (const tc of toolCalls) {
-        const handled = ToolRegistry.process(this.host as any, tc);
-        if (tc.name === 'deliver_project' && handled) {
+        const result = ToolRegistry.process(this.host as any, tc);
+        if (tc.name === 'deliver_project' && result) {
           this.handleFinalAssetGeneration(tc.args.output);
         }
+        
+        // Feed tool results back to history to satisfy strict APIs (OpenAI/Anthropic)
+        this.history.push({
+          role: 'tool',
+          name: tc.id,
+          content: typeof result === 'object' ? JSON.stringify(result) : String(result),
+          metadata: { internal: true }
+        });
+      }
+      if (toolCalls.length > 0) {
+        this.syncToStore();
       }
 
       return { text, toolCalls };
