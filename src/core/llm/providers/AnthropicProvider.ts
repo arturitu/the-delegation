@@ -9,14 +9,56 @@ export class AnthropicProvider implements LLMProvider {
     systemInstruction?: string,
     modelName: string = 'claude-3-5-sonnet-20241022'
   ): Promise<LLMResponse> {
+    const mappedMessages = messages.filter(m => m.role !== 'system').map(m => {
+      if (m.role === 'tool') {
+        return {
+          role: 'user', // Anthropic treats tool results as user messages
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: m.name || "unknown",
+              content: m.content || "Success"
+            }
+          ]
+        };
+      }
+      
+      const res: any = {
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content ? [{ type: 'text', text: m.content }] : []
+      };
+
+      if (m.tool_calls && m.tool_calls.length > 0) {
+        if (m.role === 'assistant') {
+          res.content.push(...m.tool_calls.map(tc => ({
+            type: 'tool_use',
+            id: tc.id,
+            name: tc.function.name,
+            input: JSON.parse(tc.function.arguments || "{}")
+          })));
+        }
+      }
+
+      if (res.content.length === 0) {
+        res.content.push({ type: 'text', text: '...' });
+      }
+
+      return res;
+    });
+
     const payload: any = {
       model: modelName,
-      messages: messages.filter(m => m.role !== 'system').map(m => ({
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content || ""
-      })),
+      messages: mappedMessages,
       max_tokens: 4096,
     };
+
+    if (tools && tools.length > 0) {
+      payload.tools = tools.map(t => ({
+        name: t.function.name,
+        description: t.function.description || "",
+        input_schema: t.function.parameters
+      }));
+    }
 
     if (systemInstruction) {
       payload.system = systemInstruction;
@@ -42,8 +84,22 @@ export class AnthropicProvider implements LLMProvider {
     const data = await response.json();
     console.log("Anthropic response:", data);
 
+    const textContent = data.content?.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n') || "";
+    
+    const toolCalls = data.content
+      ?.filter((c: any) => c.type === 'tool_use')
+      ?.map((tc: any) => ({
+        id: tc.id,
+        type: 'function',
+        function: {
+          name: tc.name,
+          arguments: JSON.stringify(tc.input)
+        }
+      }));
+
     return {
-      content: data.content[0]?.text || "",
+      content: textContent,
+      tool_calls: toolCalls && toolCalls.length > 0 ? toolCalls : undefined,
       usage: {
         promptTokens: data.usage?.input_tokens || 0,
         completionTokens: data.usage?.output_tokens || 0,
