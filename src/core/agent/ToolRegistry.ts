@@ -5,6 +5,7 @@ import { completeTask } from './tools/completeTask';
 import { deliverProject } from './tools/deliverProject';
 
 export interface ToolCall {
+  id?: string;
   name: string;
   args: any;
 }
@@ -23,22 +24,29 @@ export class ToolRegistry {
   /**
    * Processes a tool call by dispatching it to the appropriate tool handler.
    */
-  public static process(agent: AgentActionContext, toolCall: ToolCall): boolean {
+  public static process(agent: AgentActionContext, toolCall: ToolCall): boolean | string {
     const { name, args } = toolCall;
 
+    let result = false;
     switch (name) {
       case 'set_user_brief':
-        return setUserBrief(agent, args);
+        result = setUserBrief(agent, args);
+        break;
       case 'propose_task':
-        return proposeTask(agent, args);
+        result = proposeTask(agent, args);
+        break;
       case 'complete_task':
-        return completeTask(agent, args);
+        result = completeTask(agent, args);
+        break;
       case 'deliver_project':
-        return deliverProject(agent, args);
+        result = deliverProject(agent, args);
+        break;
       default:
         console.warn(`[ToolRegistry] Unknown tool: ${name}`);
-        return false;
+        return `Error: Unknown tool ${name}`;
     }
+    
+    return result ? `Action '${name}' executed successfully.` : `Action '${name}' failed or ignored (invalid state).`;
   }
 
   public static getDefinitions(agentIndex: number, phase: string, subagentsCount: number = 0): any[] {

@@ -14,6 +14,13 @@ export const GEMINI_PRICING: Record<string, ModelPricing> = {
   'gemini-3.1-pro-preview': { inputPer1M: 2.00, outputPer1M: 12.00 },
   'gemini-3.1-flash-lite-preview': { inputPer1M: 0.25, outputPer1M: 1.50 },
   
+  // Third Party Text Models
+  'meta/llama-3.3-70b-instruct': { inputPer1M: 0.50, outputPer1M: 1.00 },
+  'nvidia/nemotron-3-ultra-550b-a55b': { inputPer1M: 5.00, outputPer1M: 15.00 },
+  'gpt-4o': { inputPer1M: 5.00, outputPer1M: 15.00 },
+  'gpt-4o-mini': { inputPer1M: 0.15, outputPer1M: 0.60 },
+  'claude-3-5-sonnet-20241022': { inputPer1M: 3.00, outputPer1M: 15.00 },
+  
   // Image Models
   [DEFAULT_MODELS.image]: { perImage: 0.067 },
   'gemini-3-pro-image-preview': { perImage: 0.134 },

@@ -192,7 +192,7 @@ export const AgentConfigPanel: React.FC<AgentConfigPanelProps> = ({
                 >
                   {availableModels.map(m => <option key={m} value={m} className="lowercase">{m}</option>)}
                 </select>
-              ), 'The specific Gemini model this agent will use.')}
+              ), 'The specific AI model this agent will use.')}
             </div>
 
             {/* Content Group */}

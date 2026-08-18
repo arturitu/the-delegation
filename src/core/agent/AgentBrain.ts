@@ -1,5 +1,5 @@
 import { LLMMessage } from '../llm/types';
-import { GeminiProvider } from '../llm/providers/GeminiProvider';
+import { createLLMProvider } from '../llm/providers';
 import { useUiStore } from '../../integration/store/uiStore';
 import { useCoreStore } from '../../integration/store/coreStore';
 import { useTeamStore } from '../../integration/store/teamStore';
@@ -38,9 +38,8 @@ export class AgentBrain {
       this.refreshFromStore();
       const core = useCoreStore.getState();
       const llmConfig = useUiStore.getState().llmConfig;
-      if (!llmConfig.apiKey) throw new Error('Gemini API key is required');
-      const provider = new GeminiProvider(llmConfig.apiKey);
       const model = this.host.data.model || llmConfig.model;
+      const provider = createLLMProvider({ ...llmConfig, model });
       const teamId = useTeamStore.getState().selectedAgentSetId;
       const activeTeam = useTeamStore.getState().customSystems.find(s => s.id === teamId)
         || AGENTIC_SETS.find(s => s.id === teamId);
@@ -112,12 +111,12 @@ export class AgentBrain {
       const text = response.content || '';
       const toolCalls = response.tool_calls?.map(tc => {
         try {
-          return { name: tc.function.name, args: JSON.parse(tc.function.arguments) };
+          return { id: tc.id, name: tc.function.name, args: JSON.parse(tc.function.arguments) };
         } catch (e) {
           console.error('[AgentBrain] Failed to parse tool arguments', tc.function.arguments);
-          return null;
+          return { id: tc.id, name: tc.function.name, args: { _error: "malformed_json" }, _malformed: true };
         }
-      }).filter(Boolean) as any[] || [];
+      }) || [];
 
       // 6. Final Message Construction
       const isInternalTrigger = options.silent;
@@ -157,10 +156,24 @@ export class AgentBrain {
 
       // 7. Process Actions (Tools)
       for (const tc of toolCalls) {
-        const handled = ToolRegistry.process(this.host as any, tc);
-        if (tc.name === 'deliver_project' && handled) {
+        const result = tc._malformed 
+          ? "Error: Invalid JSON arguments provided for tool call." 
+          : ToolRegistry.process(this.host as any, tc);
+          
+        if (tc.name === 'deliver_project' && result && !tc._malformed) {
           this.handleFinalAssetGeneration(tc.args.output);
         }
+        
+        // Feed tool results back to history to satisfy strict APIs (OpenAI/Anthropic)
+        this.history.push({
+          role: 'tool',
+          name: tc.id,
+          content: typeof result === 'object' ? JSON.stringify(result) : String(result),
+          metadata: { internal: true }
+        });
+      }
+      if (toolCalls.length > 0) {
+        this.syncToStore();
       }
 
       return { text, toolCalls };
@@ -235,9 +248,8 @@ export class AgentBrain {
 
     try {
       const llmConfig = useUiStore.getState().llmConfig;
-      if (!llmConfig.apiKey) throw new Error('Gemini API key is required');
-      const provider = new GeminiProvider(llmConfig.apiKey) as any;
       const model = options.model || activeTeam.outputModel || llmConfig.model;
+      const provider = createLLMProvider({ ...llmConfig, model }) as any;
 
       core.addLogEntry({
         agentIndex: -1,

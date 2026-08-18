@@ -40,6 +40,9 @@ export const useUiStore = create<CharacterState>()(
       } catch { }
       return {
         apiKey: '',
+        nimApiKey: '',
+        openaiApiKey: '',
+        anthropicApiKey: '',
         model: DEFAULT_MODELS.text
       };
     })(),

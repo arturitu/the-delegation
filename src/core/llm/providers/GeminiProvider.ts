@@ -17,6 +17,7 @@ export class GeminiProvider implements LLMProvider {
     systemInstruction?: string,
     modelName: string = DEFAULT_MODELS.text
   ): Promise<LLMResponse> {
+
     const contents = this.mapMessagesToGemini(messages);
 
     const systemTools: Tool[] | undefined = tools ? [{
